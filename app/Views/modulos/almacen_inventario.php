@@ -154,7 +154,8 @@
                                 <select id="selectAlmacen" class="form-select">
                                     <option value="">Todos</option>
                                     <?php foreach (($almacenes ?? []) as $a): ?>
-                                        <option value="<?= (int) $a['id'] ?>"><?= esc($a['codigo'] . ' - ' . $a['nombre']) ?>
+                                        <option value="<?= (int) $a['id'] ?>">
+                                            <?= esc($a['codigo'] . ' - ' . $a['nombre']) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
@@ -295,7 +296,8 @@
                         <select id="agAlmacen" class="form-select">
                             <option value="">Seleccione...</option>
                             <?php foreach (($almacenes ?? []) as $a): ?>
-                                <option value="<?= (int) $a['id'] ?>"><?= esc($a['codigo'] . ' - ' . $a['nombre']) ?></option>
+                                <option value="<?= (int) $a['id'] ?>"><?= esc($a['codigo'] . ' - ' . $a['nombre']) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -779,14 +781,14 @@
                 loteNotas: $('#eNotas').val()
             };
 
-            try{
+            try {
                 const res = await fetch("<?= site_url('api/inventario/editar') ?>", {
-                    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                 });
                 const js = await res.json();
-                if(js.ok){
+                if (js.ok) {
                     bootstrap.Modal.getInstance(document.getElementById('editarModal')).hide();
-                    dt.ajax.reload(null,false);
+                    dt.ajax.reload(null, false);
                     loadKpis(); // Refresh KPIs
                     Swal.fire({
                         icon: 'success',
@@ -795,14 +797,14 @@
                         timer: 2000,
                         showConfirmButton: false
                     });
-                }else{
+                } else {
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
                         text: js.message || 'No se pudo guardar'
                     });
                 }
-            }catch(e){ 
+            } catch (e) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
@@ -812,9 +814,9 @@
         });
 
         /* ===== ELIMINAR ===== */
-        $(document).on('click','.btn-del', async function(){
+        $(document).on('click', '.btn-del', async function () {
             const row = JSON.parse(decodeURIComponent(this.dataset.row));
-            
+
             Swal.fire({
                 title: "¿Estás seguro?",
                 text: "¡No podrás revertir esto!",
@@ -826,11 +828,11 @@
                 cancelButtonText: "Cancelar"
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    try{
-                        const res = await fetch("<?= site_url('api/inventario/eliminar') ?>/"+row.stockId, { method:'DELETE' });
-                        const js  = await res.json();
-                        if(js.ok) {
-                            dt.ajax.reload(null,false);
+                    try {
+                        const res = await fetch("<?= site_url('api/inventario/eliminar') ?>/" + row.stockId, { method: 'DELETE' });
+                        const js = await res.json();
+                        if (js.ok) {
+                            dt.ajax.reload(null, false);
                             loadKpis(); // Refresh KPIs
                             Swal.fire({
                                 title: "¡Eliminado!",
@@ -844,7 +846,7 @@
                                 text: js.message || 'No se pudo eliminar'
                             });
                         }
-                    }catch(e){ 
+                    } catch (e) {
                         Swal.fire({
                             icon: 'error',
                             title: 'Error',
@@ -960,21 +962,21 @@
                 autoCrear: !existente
             };
 
-            if (!payload.ubicacionId) { 
+            if (!payload.ubicacionId) {
                 Swal.fire({ icon: 'warning', title: 'Atención', text: 'Selecciona una ubicación.' });
-                return; 
+                return;
             }
-            if (payload.cantidad === null || isNaN(payload.cantidad)) { 
+            if (payload.cantidad === null || isNaN(payload.cantidad)) {
                 Swal.fire({ icon: 'warning', title: 'Atención', text: 'Captura la cantidad.' });
-                return; 
+                return;
             }
-            if (existente && !payload.articuloId) { 
+            if (existente && !payload.articuloId) {
                 Swal.fire({ icon: 'warning', title: 'Atención', text: 'Activas “Artículo en existencia”: selecciona uno de la lista.' });
-                return; 
+                return;
             }
-            if (!existente && !payload.articuloTexto) { 
+            if (!existente && !payload.articuloTexto) {
                 Swal.fire({ icon: 'warning', title: 'Atención', text: 'Escribe el nombre del nuevo artículo.' });
-                return; 
+                return;
             }
             if (payload.cantidad <= 0 && payload.operacion !== 'reemplazar') {
                 Swal.fire({ icon: 'warning', title: 'Atención', text: 'La cantidad debe ser > 0. Para ajustes exactos usa "Reemplazar".' });
@@ -1019,13 +1021,13 @@
                     return;
                 }
 
-                if (!res.ok || !js || !js.ok){ 
+                if (!res.ok || !js || !js.ok) {
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
                         text: (js && js.message) || 'No se pudo guardar'
                     });
-                    return; 
+                    return;
                 }
 
                 bootstrap.Modal.getInstance(document.getElementById('agregarModal')).hide();
@@ -1038,7 +1040,7 @@
                     timer: 2000,
                     showConfirmButton: false
                 });
-            }catch(e){
+            } catch (e) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
@@ -1135,6 +1137,31 @@
 
         // Stop scanner when modal closes
         $('#agregarModal').on('hidden.bs.modal', stopScanner);
+
+        /* ===== RELOAD DATA ON MAQUILADORA CHANGE ===== */
+        // Reload data when page becomes visible (e.g., after switching maquiladora in another tab/window)
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                // Page is now visible, reload data
+                dt.ajax.reload(null, false);
+                loadKpis();
+            }
+        });
+
+        // Listen for storage events (in case maquiladora is changed via localStorage/sessionStorage)
+        window.addEventListener('storage', function (e) {
+            if (e.key === 'maquiladora_id' || e.key === 'maquiladoraID') {
+                // Maquiladora changed, reload data
+                dt.ajax.reload(null, false);
+                loadKpis();
+            }
+        });
+
+        // Also reload on page focus (when user returns to this tab)
+        window.addEventListener('focus', function () {
+            dt.ajax.reload(null, false);
+            loadKpis();
+        });
 
     })();
 </script>

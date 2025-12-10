@@ -19,7 +19,7 @@ class AlmacenController extends BaseController
         if (!can('menu.inventario_almacen')) {
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
-        
+
         $maquiladoraId = session()->get('maquiladora_id');
         $data = [
             'title' => 'Inventario de Almacenes',
@@ -368,36 +368,106 @@ class AlmacenController extends BaseController
         $maquiladoraId = session()->get('maquiladora_id');
         $db = \Config\Database::connect();
 
+        // Helper to check if table has column
+        $hasAlmacenMaq = false;
+        $hasArticuloMaq = false;
+        try {
+            foreach ($db->getFieldData('almacen') as $f) {
+                if ($f->name === 'maquiladoraID') {
+                    $hasAlmacenMaq = true;
+                    break;
+                }
+            }
+            foreach ($db->getFieldData('articulo') as $f) {
+                if ($f->name === 'maquiladoraID') {
+                    $hasArticuloMaq = true;
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
         // 1. Total Productos (SKUs únicos con stock > 0)
-        $totalProductos = $db->table('stock')
-            ->select('COUNT(DISTINCT articuloId) as total')
-            ->where('cantidad >', 0)
-            ->get()->getRow()->total;
+        $qTotal = $db->table('stock s')
+            ->select('COUNT(DISTINCT s.articuloId) as total')
+            ->where('s.cantidad >', 0);
+
+        if ($maquiladoraId && ($hasAlmacenMaq || $hasArticuloMaq)) {
+            $qTotal->join('ubicacion u', 'u.id = s.ubicacionId', 'left')
+                ->join('almacen al', 'al.id = u.almacenId', 'left')
+                ->join('articulo a', 'a.id = s.articuloId', 'left');
+
+            $qTotal->groupStart();
+            if ($hasAlmacenMaq) {
+                $qTotal->where('al.maquiladoraID', (int) $maquiladoraId);
+            }
+            if ($hasArticuloMaq) {
+                $qTotal->orWhere('a.maquiladoraID', (int) $maquiladoraId);
+            }
+            $qTotal->groupEnd();
+        }
+
+        $totalProductos = $qTotal->get()->getRow()->total;
 
         // 2. Stock Bajo (Items donde cantidad < stockMin)
-        $stockBajo = $db->table('stock s')
+        $qBajo = $db->table('stock s')
             ->join('articulo a', 'a.id = s.articuloId')
             ->where('s.cantidad < a.stockMin')
-            ->where('a.stockMin IS NOT NULL')
-            ->countAllResults();
+            ->where('a.stockMin IS NOT NULL');
+
+        if ($maquiladoraId && ($hasAlmacenMaq || $hasArticuloMaq)) {
+            $qBajo->join('ubicacion u', 'u.id = s.ubicacionId', 'left')
+                ->join('almacen al', 'al.id = u.almacenId', 'left');
+
+            $qBajo->groupStart();
+            if ($hasAlmacenMaq) {
+                $qBajo->where('al.maquiladoraID', (int) $maquiladoraId);
+            }
+            if ($hasArticuloMaq) {
+                $qBajo->orWhere('a.maquiladoraID', (int) $maquiladoraId);
+            }
+            $qBajo->groupEnd();
+        }
+
+        $stockBajo = $qBajo->countAllResults();
 
         // 3. Por Caducar (< 30 días)
-        $porCaducar = $db->table('stock s')
+        $qCaducar = $db->table('stock s')
             ->join('lote l', 'l.id = s.loteId')
             ->where('l.fechaCaducidad IS NOT NULL')
             ->where('l.fechaCaducidad <=', date('Y-m-d', strtotime('+30 days')))
             ->where('l.fechaCaducidad >=', date('Y-m-d'))
-            ->where('s.cantidad >', 0)
-            ->countAllResults();
+            ->where('s.cantidad >', 0);
+
+        if ($maquiladoraId && ($hasAlmacenMaq || $hasArticuloMaq)) {
+            $qCaducar->join('ubicacion u', 'u.id = s.ubicacionId', 'left')
+                ->join('almacen al', 'al.id = u.almacenId', 'left')
+                ->join('articulo a', 'a.id = s.articuloId', 'left');
+
+            $qCaducar->groupStart();
+            if ($hasAlmacenMaq) {
+                $qCaducar->where('al.maquiladoraID', (int) $maquiladoraId);
+            }
+            if ($hasArticuloMaq) {
+                $qCaducar->orWhere('a.maquiladoraID', (int) $maquiladoraId);
+            }
+            $qCaducar->groupEnd();
+        }
+
+        $porCaducar = $qCaducar->countAllResults();
 
         // 4. Distribución por Almacén
-        $distribucion = $db->table('stock s')
+        $qDist = $db->table('stock s')
             ->select('al.nombre as almacen, COUNT(*) as items, SUM(s.cantidad) as total_stock')
             ->join('ubicacion u', 'u.id = s.ubicacionId')
             ->join('almacen al', 'al.id = u.almacenId')
-            ->where('s.cantidad >', 0)
-            ->groupBy('al.id')
-            ->get()->getResultArray();
+            ->where('s.cantidad >', 0);
+
+        if ($maquiladoraId && $hasAlmacenMaq) {
+            $qDist->where('al.maquiladoraID', (int) $maquiladoraId);
+        }
+
+        $distribucion = $qDist->groupBy('al.id')->get()->getResultArray();
 
         return $this->response->setJSON([
             'kpis' => [
