@@ -796,5 +796,8 @@ $routes->get('pedidos-clientes/descargar-pdf/(:num)', 'PedidosClientesController
 $routes->group('modulo1/pagos', ['filter' => 'auth:Administrador,Jefe,RH'], static function ($r) {
     $r->get('empleado/(:num)', 'PagosController::getEmpleado/$1');
     $r->post('actualizar-forma-pago', 'PagosController::actualizarFormaPago');
+    $r->post('guardar-tarifa', 'PagosController::guardarTarifa');
+    $r->get('tarifas', 'PagosController::tarifas');
+    $r->post('reporte-diario', 'PagosController::reporteDiario');
     $r->get('exportar', 'PagosController::exportar');
 });

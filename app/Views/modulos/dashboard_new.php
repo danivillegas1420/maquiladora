@@ -9,11 +9,91 @@
         --warning-color: #f72585;
         --bg-color: #f8f9fa;
         --card-bg: #ffffff;
+        --text-color: #2b2d42;
+        --text-muted-color: #8d99ae;
+    }
+
+    /* Dark mode variables */
+    body[data-theme="dark"] {
+        --bg-color: #121212;
+        --card-bg: #1e1e1e;
+        --text-color: #f8f9fa;
+        --text-muted-color: #ced4da;
     }
 
     body {
         background-color: var(--bg-color);
         font-family: 'Inter', sans-serif;
+        color: var(--text-color);
+    }
+
+    /* FORCE ALL TEXT TO BE VISIBLE IN DARK MODE */
+    body[data-theme="dark"] * {
+        color: var(--text-color) !important;
+    }
+
+    /* Specific overrides for elements that should keep their original colors */
+    body[data-theme="dark"] .bg-primary *,
+    body[data-theme="dark"] .bg-success *,
+    body[data-theme="dark"] .bg-warning *,
+    body[data-theme="dark"] .bg-danger *,
+    body[data-theme="dark"] .bg-info *,
+    body[data-theme="dark"] .btn-primary *,
+    body[data-theme="dark"] .btn-success *,
+    body[data-theme="dark"] .btn-warning *,
+    body[data-theme="dark"] .btn-danger *,
+    body[data-theme="dark"] .btn-info * {
+        color: inherit !important;
+    }
+
+    /* Links should be blue and visible */
+    body[data-theme="dark"] a {
+        color: #4dabf7 !important;
+    }
+
+    body[data-theme="dark"] a:hover {
+        color: #339af0 !important;
+    }
+
+    /* Ensure dashboard containers are visible */
+    body[data-theme="dark"] .container-fluid {
+        background-color: var(--bg-color) !important;
+        color: var(--text-color) !important;
+    }
+
+    /* Card backgrounds and text */
+    body[data-theme="dark"] .kpi-card,
+    body[data-theme="dark"] .chart-card {
+        background-color: var(--card-bg) !important;
+        color: var(--text-color) !important;
+        border: 1px solid #333 !important;
+    }
+
+    /* Fix any remaining white text issues */
+    body[data-theme="dark"] .text-white,
+    body[data-theme="dark"] [style*="color: white"],
+    body[data-theme="dark"] [style*="color:#fff"],
+    body[data-theme="dark"] [style*="color: #fff"] {
+        color: var(--text-color) !important;
+    }
+
+    /* Fix breadcrumb and navigation text */
+    body[data-theme="dark"] .breadcrumb,
+    body[data-theme="dark"] .breadcrumb-item,
+    body[data-theme="dark"] .breadcrumb-item + .breadcrumb-item::before,
+    body[data-theme="dark"] .topbar,
+    body[data-theme="dark"] .topbar *,
+    body[data-theme="dark"] .navbar-light *,
+    body[data-theme="dark"] .text-gray-600,
+    body[data-theme="dark"] .small {
+        color: var(--text-color) !important;
+    }
+
+    /* Fix topbar background */
+    body[data-theme="dark"] .navbar.bg-white,
+    body[data-theme="dark"] .topbar {
+        background-color: #1e1e1e !important;
+        border-bottom-color: #333 !important;
     }
 
     .dashboard-header {
@@ -22,7 +102,7 @@
 
     .dashboard-title {
         font-weight: 700;
-        color: #2b2d42;
+        color: var(--text-color);
     }
 
     .kpi-card {
@@ -33,6 +113,11 @@
         transition: transform 0.3s ease;
         overflow: hidden;
         height: 100%;
+    }
+
+    /* Dark mode shadow for cards */
+    body[data-theme="dark"] .kpi-card {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     }
 
     .kpi-card:hover {
@@ -53,12 +138,12 @@
     .kpi-value {
         font-size: 2rem;
         font-weight: 700;
-        color: #2b2d42;
+        color: var(--text-color);
         margin-bottom: 0.25rem;
     }
 
     .kpi-label {
-        color: #8d99ae;
+        color: var(--text-muted-color);
         font-size: 0.875rem;
         font-weight: 500;
         text-transform: uppercase;
@@ -74,10 +159,15 @@
         margin-bottom: 1.5rem;
     }
 
+    /* Dark mode shadow for chart cards */
+    body[data-theme="dark"] .chart-card {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
     .chart-title {
         font-size: 1.1rem;
         font-weight: 600;
-        color: #2b2d42;
+        color: var(--text-color);
         margin-bottom: 1.5rem;
     }
 
@@ -87,6 +177,11 @@
         display: flex;
         align-items: start;
         gap: 1rem;
+    }
+
+    /* Dark mode border for notification items */
+    body[data-theme="dark"] .notif-item {
+        border-bottom-color: #333;
     }
 
     .notif-item:last-child {
@@ -261,7 +356,49 @@
 
     // Configuración común
     Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.color = '#6c757d';
+    
+    // Configurar colores según el tema actual
+    const isDarkMode = document.body.getAttribute('data-theme') === 'dark';
+    const chartTextColor = isDarkMode ? '#f8f9fa' : '#212529';
+    const gridColor = isDarkMode ? '#333333' : '#e0e0e0';
+    
+    Chart.defaults.color = chartTextColor;
+    
+    // Actualizar colores del gráfico cuando cambie el tema
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                const isDark = document.body.getAttribute('data-theme') === 'dark';
+                const newTextColor = isDark ? '#f8f9fa' : '#212529';
+                const newGridColor = isDark ? '#333333' : '#e0e0e0';
+                
+                Chart.defaults.color = newTextColor;
+                
+                // Actualizar todos los gráficos existentes con nuevos colores
+                Chart.helpers.each(Chart.instances, (instance) => {
+                    // Actualizar colores de las escalas
+                    if (instance.options.scales) {
+                        if (instance.options.scales.x) {
+                            instance.options.scales.x.ticks = { ...instance.options.scales.x.ticks, color: newTextColor };
+                            instance.options.scales.x.grid = { ...instance.options.scales.x.grid, color: newGridColor };
+                        }
+                        if (instance.options.scales.y) {
+                            instance.options.scales.y.ticks = { ...instance.options.scales.y.ticks, color: newTextColor };
+                            instance.options.scales.y.grid = { ...instance.options.scales.y.grid, color: newGridColor };
+                        }
+                    }
+                    // Actualizar colores de leyenda
+                    if (instance.options.plugins && instance.options.plugins.legend) {
+                        instance.options.plugins.legend.labels = { ...instance.options.plugins.legend.labels, color: newTextColor };
+                    }
+                    
+                    instance.update();
+                });
+            }
+        });
+    });
+    
+    observer.observe(document.body, { attributes: true });
 
     // Gráfico de Producción
     new Chart(document.getElementById('productionChart'), {
@@ -271,11 +408,21 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top' }
+                legend: { 
+                    position: 'top',
+                    labels: { color: chartTextColor }
+                }
             },
             scales: {
-                y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
-                x: { grid: { display: false } }
+                y: { 
+                    beginAtZero: true, 
+                    grid: { borderDash: [2, 4], color: gridColor },
+                    ticks: { color: chartTextColor }
+                },
+                x: { 
+                    grid: { display: false, color: gridColor },
+                    ticks: { color: chartTextColor }
+                }
             }
         }
     });
@@ -288,11 +435,21 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }
+                legend: { 
+                    display: false,
+                    labels: { color: chartTextColor }
+                }
             },
             scales: {
-                y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
-                x: { grid: { display: false } }
+                y: { 
+                    beginAtZero: true, 
+                    grid: { borderDash: [2, 4], color: gridColor },
+                    ticks: { color: chartTextColor }
+                },
+                x: { 
+                    grid: { display: false, color: gridColor },
+                    ticks: { color: chartTextColor }
+                }
             }
         }
     });
@@ -306,11 +463,21 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }
+                legend: { 
+                    display: false,
+                    labels: { color: chartTextColor }
+                }
             },
             scales: {
-                x: { beginAtZero: true, grid: { borderDash: [2, 4] } },
-                y: { grid: { display: false } }
+                x: { 
+                    beginAtZero: true, 
+                    grid: { borderDash: [2, 4], color: gridColor },
+                    ticks: { color: chartTextColor }
+                },
+                y: { 
+                    grid: { display: false, color: gridColor },
+                    ticks: { color: chartTextColor }
+                }
             }
         }
     });

@@ -17,13 +17,13 @@ class PagosModel extends Model
     public function getEmpleadosPorMaquiladora($maquiladoraId = null)
     {
         $db = \Config\Database::connect();
-        
+
         try {
             // Si no se proporciona ID, usar el de la sesión
             if (!$maquiladoraId) {
                 $maquiladoraId = session()->get('maquiladora_id');
             }
-            
+
             if (!$maquiladoraId) {
                 return [];
             }
@@ -124,7 +124,7 @@ class PagosModel extends Model
     public function getEmpleadoPorId($empleadoId)
     {
         $db = \Config\Database::connect();
-        
+
         try {
             $empleado = $db->query(
                 'SELECT 
@@ -167,16 +167,137 @@ class PagosModel extends Model
     public function actualizarFormaPago($empleadoId, $formaPago)
     {
         $db = \Config\Database::connect();
-        
+
         try {
             $builder = $db->table('empleado');
             $result = $builder->where('id', $empleadoId)->update(['Forma_pago' => $formaPago]);
-            
+
             return $result;
-            
+
         } catch (\Throwable $e) {
             log_message('error', 'Error en actualizarFormaPago: ' . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Crear o actualizar tarifa por forma de pago para una maquiladora
+     */
+    public function guardarTarifaModoPago($maquiladoraId, $formaPago, $monto)
+    {
+        $db = \Config\Database::connect();
+
+        try {
+            $builder = $db->table('tarifa_modo_pago');
+
+            $existe = $builder
+                ->where('maquiladoraID', $maquiladoraId)
+                ->where('forma_pago', $formaPago)
+                ->get()
+                ->getRowArray();
+
+            if ($existe) {
+                $result = $builder
+                    ->where('maquiladoraID', $maquiladoraId)
+                    ->where('forma_pago', $formaPago)
+                    ->update(['monto' => $monto]);
+            } else {
+                $result = $builder->insert([
+                    'maquiladoraID' => $maquiladoraId,
+                    'forma_pago'    => $formaPago,
+                    'monto'         => $monto,
+                ]);
+            }
+
+            return (bool) $result;
+
+        } catch (\Throwable $e) {
+            log_message('error', 'Error en guardarTarifaModoPago: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Obtener todas las tarifas de modo de pago para una maquiladora
+     */
+    public function getTarifasModoPagoPorMaquiladora($maquiladoraId)
+    {
+        $db = \Config\Database::connect();
+
+        try {
+            return $db->table('tarifa_modo_pago')
+                ->select('id, forma_pago, monto, maquiladoraID')
+                ->where('maquiladoraID', $maquiladoraId)
+                ->orderBy('forma_pago', 'ASC')
+                ->get()
+                ->getResultArray();
+        } catch (\Throwable $e) {
+            log_message('error', 'Error en getTarifasModoPagoPorMaquiladora: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Reporte diario de pagos: horas trabajadas y monto a pagar por empleado y fecha
+     */
+    public function getPagosDiarios($maquiladoraId, $fechaInicio, $fechaFin)
+    {
+        $db = \Config\Database::connect();
+
+        try {
+            $sql = 'SELECT 
+                        e.id AS empleado_id,
+                        e.noEmpleado,
+                        CONCAT(e.nombre, " ", e.apellido) AS nombre_completo,
+                        e.Forma_Pago AS forma_pago_empleado,
+                        tt.fecha,
+                        tt.horas_totales,
+                        COALESCE(tmp.monto, 0) AS tarifa_base,
+                        CASE 
+                            WHEN e.Forma_Pago COLLATE utf8mb4_unicode_ci = "Por hora" THEN tt.horas_totales * COALESCE(tmp.monto, 0)
+                            WHEN e.Forma_Pago COLLATE utf8mb4_unicode_ci = "Por dia" THEN COALESCE(tmp.monto, 0)
+                            ELSE 0
+                        END AS pago_dia
+                    FROM (
+                        SELECT 
+                            empleadoId,
+                            DATE(inicio) AS fecha,
+                            SUM(horas) AS horas_totales
+                        FROM tiempo_trabajo
+                        WHERE DATE(inicio) BETWEEN ? AND ?
+                        GROUP BY empleadoId, DATE(inicio)
+                    ) tt
+                    JOIN empleado e ON e.id = tt.empleadoId
+                    LEFT JOIN tarifa_modo_pago tmp 
+                        ON tmp.maquiladoraID = e.maquiladoraID
+                        AND tmp.forma_pago COLLATE utf8mb4_unicode_ci = CASE 
+                            WHEN e.Forma_Pago COLLATE utf8mb4_unicode_ci = "Por dia" THEN "Por día"
+                            ELSE e.Forma_Pago COLLATE utf8mb4_unicode_ci
+                        END';
+
+            $params = [$fechaInicio, $fechaFin];
+
+            // Filtro por maquiladora solo si existe en sesión
+            if ($maquiladoraId !== null) {
+                $sql .= ' WHERE e.maquiladoraID = ?';
+                $params[] = $maquiladoraId;
+            }
+
+            $sql .= ' AND e.Forma_Pago COLLATE utf8mb4_unicode_ci IN ("Por dia", "Por hora")
+                    ORDER BY tt.fecha ASC, nombre_completo ASC';
+
+            log_message('debug', 'getPagosDiarios SQL: ' . $sql);
+            log_message('debug', 'getPagosDiarios params: ' . json_encode($params));
+
+            $result = $db->query($sql, $params)->getResultArray();
+
+            log_message('debug', 'getPagosDiarios rows: ' . count($result));
+
+            return $result;
+
+        } catch (\Throwable $e) {
+            log_message('error', 'Error en getPagosDiarios: ' . $e->getMessage());
+            return [];
         }
     }
 }

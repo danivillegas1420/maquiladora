@@ -14,196 +14,658 @@
 
     <title><?= esc($title ?? 'Maquiladora') ?></title>
 
-    <!-- CSS: Bootstrap, Icons, Animate, DataTables (si usas tablas) y estilos del proyecto -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom fonts for this template-->
+    <link href="<?= base_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+    <!-- Animate CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
-    <link href="<?= esc(base_url('css/maquila.css')) ?>" rel="stylesheet">
+
+    <!-- Custom styles for this template-->
+    <link href="<?= base_url('css/sb-admin-2.min.css') ?>" rel="stylesheet">
+    <link href="<?= base_url('css/maquila.css') ?>" rel="stylesheet">
 
     <style>
-        /* Estilos mínimos en línea */
-        .hover-color:hover {
-            color: #0d6efd !important;
+        /* ========== MODO CLARO (Light Theme) ========== */
+
+        /* Textos principales en modo claro - Fondo suave para no lastimar la vista */
+        body:not([data-theme="dark"]) {
+            background-color: #f5f5f0;
+            color: #212529;
         }
 
-        .navbar-custom .navbar-toggler {
-            border: none;
+        body:not([data-theme="dark"]) .text-gray-800,
+        body:not([data-theme="dark"]) h1,
+        body:not([data-theme="dark"]) h2,
+        body:not([data-theme="dark"]) h3,
+        body:not([data-theme="dark"]) h4,
+        body:not([data-theme="dark"]) h5,
+        body:not([data-theme="dark"]) h6 {
+            color: #212529 !important;
         }
 
-        .badge-dot {
-            display: inline-block;
-            width: .6rem;
-            height: .6rem;
-            border-radius: 50%;
-            margin-right: .35rem
+        body:not([data-theme="dark"]) .text-gray-600 {
+            color: #5a5c69 !important;
         }
 
-        /* Forzar mismo color y espaciado en todas las opciones del menú móvil */
-        .navbar-nav.d-lg-none .nav-link,
-        .navbar-nav.d-lg-none .dropdown-item {
-            color: #000 !important;
-            opacity: 1 !important;
-            display: block;
-            padding-top: 0.35rem;
-            padding-bottom: 0.35rem;
+        body:not([data-theme="dark"]) p,
+        body:not([data-theme="dark"]) span,
+        body:not([data-theme="dark"]) div,
+        body:not([data-theme="dark"]) label {
+            color: #212529;
         }
 
-        .navbar-nav.d-lg-none > li + li,
-        .navbar-nav.d-lg-none .dropdown-item + .dropdown-item {
-            margin-top: 0.1rem;
+        /* Topbar en modo claro - fondo suave */
+        body:not([data-theme="dark"]) .topbar {
+            background-color: #fafaf8 !important;
         }
 
-        /* Mejorar visibilidad de botones e iconos */
-        .btn-outline-secondary {
-            border-color: #6c757d !important;
-            color: #6c757d !important;
-            background-color: transparent !important;
+        /* Sidebar en modo claro */
+        body:not([data-theme="dark"]) .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
         }
 
-        .btn-outline-secondary:hover {
-            background-color: #6c757d !important;
-            color: #fff !important;
+        body:not([data-theme="dark"]) .sidebar .nav-link:hover {
+            color: #ffffff !important;
         }
 
-        /* Forzar visibilidad de iconos */
-        .nav-link i,
-        .dropdown-item i,
-        .btn i,
-        .navbar-toggler i,
-        .fa,
-        .fas,
-        .far,
-        .fab,
-        .bi {
-            display: inline-block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            font-size: 1.1rem !important;
-            width: auto !important;
-            height: auto !important;
+        body:not([data-theme="dark"]) .sidebar .collapse-item {
+            color: #3a3b45 !important;
         }
 
-        /* Iconos específicos del navbar */
-        .navbar .nav-link i {
-            font-size: 1.2rem !important;
+        body:not([data-theme="dark"]) .sidebar .collapse-item:hover {
+            color: #2e59d9 !important;
         }
 
-        .navbar .btn i {
-            font-size: 1rem !important;
+        body:not([data-theme="dark"]) .sidebar .sidebar-heading {
+            color: rgba(255, 255, 255, 0.6) !important;
         }
 
-        /* Ajustar espaciado de iconos */
-        .navbar .nav-link i.me-2,
-        .navbar .dropdown-item i.me-2 {
-            margin-right: 0.5rem !important;
+        /* Tablas en modo claro */
+        body:not([data-theme="dark"]) table,
+        body:not([data-theme="dark"]) .table {
+            color: #212529 !important;
+            background-color: #fafaf8;
         }
 
-        /* Mejorar contraste en modo claro */
-        .text-dark i {
-            color: #343a40 !important;
+        body:not([data-theme="dark"]) table thead th,
+        body:not([data-theme="dark"]) .table thead th {
+            color: #212529 !important;
+            background-color: #f0f0eb;
         }
 
-        /* Forzar colores consistentes en modo claro */
-        .navbar .text-dark i,
-        .navbar .nav-link i,
-        .navbar .dropdown-item i {
-            color: #343a40 !important;
+        body:not([data-theme="dark"]) table tbody td,
+        body:not([data-theme="dark"]) .table tbody td {
+            color: #212529 !important;
         }
 
-        /* Forzar colores consistentes en modo oscuro */
-        body[data-theme="dark"] .navbar .text-dark i,
-        body[data-theme="dark"] .navbar .nav-link i,
-        body[data-theme="dark"] .navbar .dropdown-item i {
+        body:not([data-theme="dark"]) .table-striped tbody tr:nth-of-type(odd) {
+            background-color: #f5f5f0;
+        }
+
+        body:not([data-theme="dark"]) .table-hover tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.075);
+            color: #ffffff !important;
+        }
+
+        /* Cards en modo claro - fondo suave */
+        body:not([data-theme="dark"]) .card {
+            background-color: #fafaf8;
+            color: #212529;
+        }
+
+        body:not([data-theme="dark"]) .card-header {
+            color: #212529 !important;
+            background-color: #f0f0eb;
+        }
+
+        body:not([data-theme="dark"]) .card-body {
+            color: #212529;
+        }
+
+        body:not([data-theme="dark"]) .bg-white {
+            background-color: #fafaf8 !important;
+        }
+
+        /* Formularios en modo claro - fondo suave */
+        body:not([data-theme="dark"]) .form-control,
+        body:not([data-theme="dark"]) .form-select {
+            color: #212529 !important;
+            background-color: #fafaf8;
+            border-color: #d1d3e2;
+        }
+
+        body:not([data-theme="dark"]) .form-control:focus,
+        body:not([data-theme="dark"]) .form-select:focus {
+            background-color: #ffffff;
+            border-color: #4e73df;
+        }
+
+        body:not([data-theme="dark"]) .form-control::placeholder {
+            color: #858796 !important;
+        }
+
+        /* Dropdown menus en modo claro - fondo suave */
+        body:not([data-theme="dark"]) .dropdown-menu {
+            background-color: #fafaf8;
+        }
+
+        body:not([data-theme="dark"]) .dropdown-item {
+            color: #3a3b45 !important;
+        }
+
+        body:not([data-theme="dark"]) .dropdown-item:hover {
+            color: #2e59d9 !important;
+            background-color: #f0f0eb;
+        }
+
+        /* Modals en modo claro - fondo suave */
+        body:not([data-theme="dark"]) .modal-content {
+            background-color: #fafaf8;
+        }
+
+        body:not([data-theme="dark"]) .modal-header {
+            background-color: #f0f0eb;
+        }
+
+        /* Footer en modo claro - fondo suave */
+        body:not([data-theme="dark"]) .sticky-footer {
+            background-color: #fafaf8 !important;
+        }
+
+        /* ========== MODO OSCURO (Dark Theme) ========== */
+
+        /* Textos principales en modo oscuro */
+        body[data-theme="dark"] {
+            background-color: #1a1d20;
+            color: #f8f9fa;
+        }
+
+        body[data-theme="dark"] .text-gray-800,
+        body[data-theme="dark"] h1,
+        body[data-theme="dark"] h2,
+        body[data-theme="dark"] h3,
+        body[data-theme="dark"] h4,
+        body[data-theme="dark"] h5,
+        body[data-theme="dark"] h6 {
             color: #f8f9fa !important;
         }
 
-        /* Botón toggle de tema específico */
-        .js-theme-toggle {
-            padding: 0.375rem 0.5rem !important;
-            border-radius: 0.375rem !important;
-            transition: all 0.2s ease-in-out !important;
-            margin-left: 0.5rem !important;
-            margin-right: 0.5rem !important;
+        body[data-theme="dark"] .text-gray-600 {
+            color: #cbd3da !important;
         }
 
-        .js-theme-toggle:hover {
-            transform: scale(1.05) !important;
+        body[data-theme="dark"] p,
+        body[data-theme="dark"] span,
+        body[data-theme="dark"] div,
+        body[data-theme="dark"] label {
+            color: #f8f9fa;
         }
 
-        /* Iconos de usuario y notificaciones */
-        .fa-user-circle,
-        .bi-bell {
-            font-size: 1.3rem !important;
+        /* Sidebar en modo oscuro */
+        body[data-theme="dark"] .sidebar {
+            background: linear-gradient(180deg, #1e3a5f 10%, #2c3e50 100%);
         }
 
-        /* Navbar toggler icon */
-        .navbar-toggler-icon {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%2833, 37, 41, 0.75%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+        body[data-theme="dark"] .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
         }
 
-        /* Navbar toggler icon en modo oscuro */
-        body[data-theme="dark"] .navbar-toggler-icon {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28248, 249, 250, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+        body[data-theme="dark"] .sidebar .nav-link:hover {
+            color: #ffffff !important;
         }
 
-        /* Botón toggler en modo oscuro */
-        body[data-theme="dark"] .navbar-toggler {
-            border-color: rgba(248, 249, 250, 0.3) !important;
+        body[data-theme="dark"] .sidebar .collapse-item {
+            color: #e9ecef !important;
         }
 
-        body[data-theme="dark"] .navbar-toggler:hover {
-            border-color: rgba(248, 249, 250, 0.6) !important;
+        body[data-theme="dark"] .sidebar .collapse-item:hover {
+            color: #4e73df !important;
+            background-color: rgba(78, 115, 223, 0.1);
         }
 
-        /* Mejorar espaciado en navbar móvil */
-        .d-lg-none .nav-item {
-            margin-right: 0.25rem;
+        body[data-theme="dark"] .sidebar .sidebar-heading {
+            color: rgba(255, 255, 255, 0.5) !important;
         }
 
-        .d-lg-none .nav-link {
-            padding: 0.5rem !important;
+        body[data-theme="dark"] .sidebar .bg-white {
+            background-color: #2c3e50 !important;
         }
 
-        /* Espaciado entre elementos del navbar */
-        .navbar-nav .nav-item {
-            margin-left: 0.25rem;
+        /* Topbar en modo oscuro */
+        body[data-theme="dark"] .topbar {
+            background-color: #2c3e50 !important;
         }
 
-        .navbar-nav .nav-item:first-child {
-            margin-left: 0;
+        body[data-theme="dark"] .topbar .nav-link {
+            color: #f8f9fa !important;
         }
 
-        /* Ajustar contenedor de elementos móviles */
-        .d-flex.align-items-center.d-lg-none > * {
-            margin-right: 0.75rem;
+        /* Tablas en modo oscuro */
+        body[data-theme="dark"] table,
+        body[data-theme="dark"] .table {
+            color: #f8f9fa !important;
         }
 
-        .d-flex.align-items-center.d-lg-none > *:last-child {
-            margin-right: 0;
+        body[data-theme="dark"] table thead th,
+        body[data-theme="dark"] .table thead th {
+            color: #f8f9fa !important;
+            background-color: #2c3e50;
+            border-color: #495057;
         }
 
-        /* Mejorar espaciado en menú escritorio */
-        .d-none.d-lg-flex .nav-item {
-            margin-left: 0.5rem;
+        body[data-theme="dark"] table tbody td,
+        body[data-theme="dark"] .table tbody td {
+            color: #f8f9fa !important;
+            border-color: #495057;
         }
 
-        .d-none.d-lg-flex .nav-item:first-child {
-            margin-left: 0;
+        body[data-theme="dark"] .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(255, 255, 255, 0.03);
         }
 
-        /* Botones con mejor espaciado */
-        .btn-sm {
-            padding: 0.4rem 0.6rem !important;
-            margin: 0 0.25rem !important;
+        body[data-theme="dark"] .table-hover tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.075);
+            color: #ffffff !important;
+        }
+
+        /* Cards en modo oscuro */
+        body[data-theme="dark"] .card {
+            background-color: #2c3e50;
+            color: #f8f9fa;
+            border-color: #495057;
+        }
+
+        body[data-theme="dark"] .card-header {
+            color: #f8f9fa !important;
+            background-color: #34495e;
+            border-color: #495057;
+        }
+
+        body[data-theme="dark"] .card-body {
+            color: #f8f9fa;
+        }
+
+        body[data-theme="dark"] .bg-white {
+            background-color: #2c3e50 !important;
+        }
+
+        /* Formularios en modo oscuro */
+        body[data-theme="dark"] .form-control,
+        body[data-theme="dark"] .form-select {
+            color: #f8f9fa !important;
+            background-color: #34495e;
+            border-color: #495057;
+        }
+
+        body[data-theme="dark"] .form-control:focus,
+        body[data-theme="dark"] .form-select:focus {
+            background-color: #3d5a80;
+            border-color: #4e73df;
+            color: #ffffff !important;
+        }
+
+        body[data-theme="dark"] .form-control::placeholder {
+            color: #adb5bd !important;
+        }
+
+        /* Dropdown menus en modo oscuro */
+        body[data-theme="dark"] .dropdown-menu {
+            background-color: #2c3e50;
+            border-color: #495057;
+        }
+
+        body[data-theme="dark"] .dropdown-item {
+            color: #f8f9fa !important;
+        }
+
+        body[data-theme="dark"] .dropdown-item:hover,
+        body[data-theme="dark"] .dropdown-item:focus {
+            color: #ffffff !important;
+            background-color: #34495e;
+        }
+
+        body[data-theme="dark"] .dropdown-divider {
+            border-color: #495057;
+        }
+
+        /* Borders en modo oscuro */
+        body[data-theme="dark"] .border {
+            border-color: #495057 !important;
+        }
+
+        body[data-theme="dark"] .border-bottom {
+            border-bottom-color: #495057 !important;
+        }
+
+        /* Badges en modo oscuro */
+        body[data-theme="dark"] .badge {
+            color: #ffffff;
+        }
+
+        /* Modals en modo oscuro */
+        body[data-theme="dark"] .modal-content {
+            background-color: #2c3e50;
+            color: #f8f9fa;
+            border-color: #495057;
+        }
+
+        body[data-theme="dark"] .modal-header {
+            border-color: #495057;
+        }
+
+        body[data-theme="dark"] .modal-footer {
+            border-color: #495057;
+        }
+
+        body[data-theme="dark"] .modal-title {
+            color: #f8f9fa !important;
+        }
+
+        body[data-theme="dark"] .close,
+        body[data-theme="dark"] .btn-close {
+            color: #f8f9fa;
+            filter: invert(1);
+        }
+
+        /* ========== ESTILOS COMUNES ========== */
+
+        /* Ajuste del logo en sidebar */
+        .sidebar-brand-icon img {
+            max-width: 50px;
+            height: auto;
+        }
+
+        /* Mejorar visibilidad de iconos */
+        .sidebar .nav-link i {
+            margin-right: 0.5rem;
+        }
+
+        /* Asegurar que los links sean visibles */
+        body[data-theme="dark"] a:not(.btn):not(.nav-link):not(.dropdown-item):not(.collapse-item) {
+            color: #4e73df;
+        }
+
+        body[data-theme="dark"] a:not(.btn):not(.nav-link):not(.dropdown-item):not(.collapse-item):hover {
+            color: #6c9aff;
+        }
+
+        /* Footer en modo oscuro */
+        body[data-theme="dark"] .sticky-footer {
+            background-color: #2c3e50 !important;
+        }
+
+        body[data-theme="dark"] .sticky-footer .copyright {
+            color: #adb5bd !important;
+        }
+
+        /* GLOBAL FIX FOR WHITE TEXT IN DARK MODE */
+        body[data-theme="dark"] * {
+            color: #f8f9fa !important;
+        }
+
+        /* Aggressive fix for any white backgrounds */
+        body[data-theme="dark"] div,
+        body[data-theme="dark"] .container-fluid,
+        body[data-theme="dark"] .row,
+        body[data-theme="dark"] .col,
+        body[data-theme="dark"] .bg-white,
+        body[data-theme="dark"] .bg-light {
+            background-color: transparent !important;
+            background: transparent !important;
+        }
+
+        /* Only restore backgrounds for specific elements that need them */
+        body[data-theme="dark"] .card,
+        body[data-theme="dark"] .card-body,
+        body[data-theme="dark"] .kpi-card,
+        body[data-theme="dark"] .chart-card,
+        body[data-theme="dark"] .sidebar,
+        body[data-theme="dark"] .topbar,
+        body[data-theme="dark"] .dropdown-menu,
+        body[data-theme="dark"] .breadcrumb {
+            background-color: #1e1e1e !important;
+        }
+
+        body[data-theme="dark"] .breadcrumb {
+            background-color: #2a2a2a !important;
+        }
+
+        /* Preserve colors for specific elements */
+        body[data-theme="dark"] .bg-primary *,
+        body[data-theme="dark"] .bg-success *,
+        body[data-theme="dark"] .bg-warning *,
+        body[data-theme="dark"] .bg-danger *,
+        body[data-theme="dark"] .bg-info *,
+        body[data-theme="dark"] .btn-primary *,
+        body[data-theme="dark"] .btn-success *,
+        body[data-theme="dark"] .btn-warning *,
+        body[data-theme="dark"] .btn-danger *,
+        body[data-theme="dark"] .btn-info *,
+        body[data-theme="dark"] .navbar-custom * {
+            color: inherit !important;
+        }
+
+        /* Fix form labels and information fields in dark mode */
+        body[data-theme="dark"] label,
+        body[data-theme="dark"] .form-label,
+        body[data-theme="dark"] dt,
+        body[data-theme="dark"] .info-label,
+        body[data-theme="dark"] .field-label,
+        body[data-theme="dark"] th,
+        body[data-theme="dark"] .table th,
+        body[data-theme="dark"] .text-dark,
+        body[data-theme="dark"] .fw-bold {
+            color: #f8f9fa !important;
+        }
+
+        /* Fix form controls and inputs */
+        body[data-theme="dark"] .form-control,
+        body[data-theme="dark"] .form-control::placeholder,
+        body[data-theme="dark"] input,
+        body[data-theme="dark"] select,
+        body[data-theme="dark"] textarea {
+            color: #f8f9fa !important;
+            background-color: #2a2a2a !important;
+            border-color: #444 !important;
+        }
+
+        /* Fix readonly/disabled inputs */
+        body[data-theme="dark"] .form-control[readonly],
+        body[data-theme="dark"] .form-control:disabled,
+        body[data-theme="dark"] .form-control-plaintext {
+            background-color: #343a40 !important;
+            color: #f8f9fa !important;
+            border-color: #454d55 !important;
+        }
+
+        /* Links should be blue */
+        body[data-theme="dark"] a {
+            color: #4dabf7 !important;
+        }
+
+        body[data-theme="dark"] a:hover {
+            color: #339af0 !important;
+        }
+
+        /* Fix cards and containers */
+        body[data-theme="dark"] .card,
+        body[data-theme="dark"] .card-body {
+            background-color: #1e1e1e !important;
+            color: #f8f9fa !important;
+        }
+
+        /* Fix all buttons in dark mode */
+        body[data-theme="dark"] .btn,
+        body[data-theme="dark"] button {
+            background-color: #343a40 !important;
+            color: #f8f9fa !important;
+            border-color: #454d55 !important;
+        }
+
+        body[data-theme="dark"] .btn:hover,
+        body[data-theme="dark"] button:hover {
+            background-color: #454d55 !important;
+            border-color: #5a6268 !important;
+            color: #ffffff !important;
+        }
+
+        /* Primary buttons keep their color but with better contrast */
+        body[data-theme="dark"] .btn-primary {
+            background-color: #0d6efd !important;
+            border-color: #0d6efd !important;
+            color: #ffffff !important;
+        }
+
+        body[data-theme="dark"] .btn-primary:hover {
+            background-color: #0b5ed7 !important;
+            border-color: #0a58ca !important;
+        }
+
+        /* Success buttons */
+        body[data-theme="dark"] .btn-success {
+            background-color: #198754 !important;
+            border-color: #198754 !important;
+            color: #ffffff !important;
+        }
+
+        /* Warning buttons */
+        body[data-theme="dark"] .btn-warning {
+            background-color: #fd7e14 !important;
+            border-color: #fd7e14 !important;
+            color: #000000 !important;
+        }
+
+        /* Danger buttons */
+        body[data-theme="dark"] .btn-danger {
+            background-color: #dc3545 !important;
+            border-color: #dc3545 !important;
+            color: #ffffff !important;
+        }
+
+        /* Fix any inline white text styles */
+        body[data-theme="dark"] [style*="color: white"],
+        body[data-theme="dark"] [style*="color:#fff"],
+        body[data-theme="dark"] [style*="color: #fff"],
+        body[data-theme="dark"] .text-white {
+            color: #f8f9fa !important;
+        }
+
+        /* Fix theme toggle button and navbar icons */
+        body[data-theme="dark"] .js-theme-toggle,
+        body[data-theme="dark"] .js-theme-toggle .js-theme-icon,
+        body[data-theme="dark"] .topbar .nav-link,
+        body[data-theme="dark"] .navbar-light .nav-link {
+            background-color: transparent !important;
+            color: #adb5bd !important;
+            border: 1px solid transparent !important;
+        }
+
+        body[data-theme="dark"] .js-theme-toggle:hover,
+        body[data-theme="dark"] .topbar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            color: #f8f9fa !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        }
+
+        /* Fix notification bell and user name */
+        body[data-theme="dark"] .topbar .fas,
+        body[data-theme="dark"] .topbar .fa,
+        body[data-theme="dark"] .topbar .text-gray-600,
+        body[data-theme="dark"] .topbar .small,
+        body[data-theme="dark"] .topbar .dropdown-toggle {
+            color: #adb5bd !important;
+        }
+
+        /* Fix notification badge */
+        body[data-theme="dark"] .badge-danger {
+            background-color: #dc3545 !important;
+            color: #ffffff !important;
+        }
+
+        /* Ensure all topbar elements are visible */
+        body[data-theme="dark"] .navbar-nav .nav-link *,
+        body[data-theme="dark"] .navbar-nav .dropdown-item {
+            color: #f8f9fa !important;
+        }
+
+        /* Fix topbar (navigation bar) in dark mode */
+        body[data-theme="dark"] .topbar {
+            background-color: #1e1e1e !important;
+            border-bottom-color: #333 !important;
+        }
+
+        body[data-theme="dark"] .topbar .navbar-brand,
+        body[data-theme="dark"] .topbar .nav-link,
+        body[data-theme="dark"] .topbar .text-gray-600,
+        body[data-theme="dark"] .topbar .small {
+            color: #f8f9fa !important;
+        }
+
+        /* Fix breadcrumb area */
+        body[data-theme="dark"] .breadcrumb {
+            background-color: #2a2a2a !important;
+            border-radius: .35rem;
+            padding: .75rem 1rem;
+        }
+
+        body[data-theme="dark"] .breadcrumb-item,
+        body[data-theme="dark"] .breadcrumb-item + .breadcrumb-item::before {
+            color: #f8f9fa !important;
+        }
+
+        body[data-theme="dark"] .breadcrumb-item.active {
+            color: #ced4da !important;
+        }
+
+        /* Fix any white containers that might hold breadcrumbs */
+        body[data-theme="dark"] .container-fluid .bg-white,
+        body[data-theme="dark"] .bg-white .breadcrumb,
+        body[data-theme="dark"] .bg-light .breadcrumb {
+            background-color: #2a2a2a !important;
+        }
+
+        /* Force breadcrumb text to be visible regardless of container */
+        body[data-theme="dark"] .breadcrumb *,
+        body[data-theme="dark"] .breadcrumb-item,
+        body[data-theme="dark"] .breadcrumb-item a {
+            color: #f8f9fa !important;
+        }
+
+        /* Fix any white backgrounds in dark mode */
+        body[data-theme="dark"] .bg-white {
+            background-color: #1e1e1e !important;
+            color: #f8f9fa !important;
+        }
+
+        /* Ensure dropdown menus are dark */
+        body[data-theme="dark"] .dropdown-menu {
+            background-color: #2a2a2a !important;
+            color: #f8f9fa !important;
+        }
+
+        body[data-theme="dark"] .dropdown-item {
+            color: #f8f9fa !important;
+        }
+
+        body[data-theme="dark"] .dropdown-item:hover {
+            background-color: #404040 !important;
+            color: #ffffff !important;
         }
     </style>
 
     <?= $this->renderSection('head') ?>
 </head>
 
-<body class="bg-light">
+<body id="page-top">
     <?php
     // --- Defaults y cálculos de visibilidad (una sola vez) ---
     $notifCount = $notifCount ?? 0;
@@ -211,543 +673,472 @@
     $secGestion = can('menu.catalogo_disenos') || can('menu.pedidos') || can('menu.ordenes') || can('menu.produccion') || can('menu.ordenes_clientes');
     $secMuestrasInspeccion = can('menu.muestras') || can('menu.inspeccion');
     $secIncidencias = can('menu.incidencias') || can('menu.wip');
-
-    /* ← AQUI SE AGREGA menu.proveedores */
     $secPlanificacion = can('menu.planificacion_materiales') || can('menu.desperdicios') || can('menu.proveedores');
-
     $secMantenimiento = can('menu.inv_maquinas') || can('menu.mant_correctivo');
     $secLogistica = can('menu.logistica_preparacion') || can('menu.logistica_gestion') || can('menu.logistica_documentos') || can('menu.inventario_almacen');
     $secAdmin = can('menu.reportes') || can('menu.roles') || can('menu.usuarios');
     ?>
-    <nav class="navbar navbar-expand-lg navbar-custom px-3" role="navigation" aria-label="Menú principal">
-        <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="<?= esc(base_url('modulo3/dashboard')) ?>">
-                <img src="<?= esc(base_url('img/logo_Maquiladora.png')) ?>" alt="Logo" width="85"
-                    class="me-1 d-lg-none">
-                <img src="<?= esc(base_url('img/logo_Maquiladora.png')) ?>" alt="Logo" width="85"
-                    class="me-2 d-none d-lg-block">
-                <span class="fw-bold text-dark d-none d-md-inline">Sistema de Maquiladora</span>
+
+    <!-- Page Wrapper -->
+    <div id="wrapper">
+
+        <!-- Sidebar -->
+        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+
+            <!-- Sidebar - Brand -->
+            <a class="sidebar-brand d-flex align-items-center justify-content-center"
+                href="<?= base_url('modulo3/dashboard') ?>">
+                <div class="sidebar-brand-icon">
+                    <img src="<?= base_url('img/logo_Maquiladora.png') ?>" alt="Logo">
+                </div>
+                <div class="sidebar-brand-text mx-3">Maquiladora</div>
             </a>
 
-            <!-- Usuario y notificaciones (móvil) -->
-            <?php if (session()->get('logged_in') || session()->get('user_id')): ?>
-                <div class="d-flex align-items-center d-lg-none">
-                    <!-- Usuario con dropdown integrado -->
-                    <div class="dropdown">
-                        <a class="nav-link d-flex align-items-center text-dark text-decoration-none hover-color ms-lg-3"
-                            href="#" id="userMenuMobile" role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                            aria-label="Usuario">
-                            <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
-                            <?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?>
-                        </a>
-                        <ul class="dropdown-menu shadow border-0 animate__animated animate__fadeIn"
-                            aria-labelledby="userMenuMobile">
-                            <li>
-                                <a class="dropdown-item d-flex align-items-center"
-                                    href="<?= esc(base_url('modulo1/perfilempleado')) ?>">
-                                    <i class="fa-solid fa-id-badge me-2 text-primary" aria-hidden="true"></i> Perfil
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item d-flex align-items-center text-danger"
-                                    href="<?= esc(base_url('logout')) ?>">
-                                    <i class="fa-solid fa-right-from-bracket me-2" aria-hidden="true"></i> Cerrar sesión
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+            <!-- Divider -->
+            <hr class="sidebar-divider my-0">
 
-                    <!-- ENLACE ACTUALIZADO: Notificaciones -> notificaciones2 -->
-                    <a class="nav-link position-relative text-dark ms-lg-2"
-                        href="<?= esc(base_url('modulo3/notificaciones2')) ?>" aria-label="Notificaciones">
-                        <i class="bi bi-bell fs-5" aria-hidden="true"></i>
-                        <?php if ($notifCount > 0): ?>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                <?= esc($notifCount) ?>
-                                <span class="visually-hidden">notificaciones</span>
-                            </span>
-                        <?php endif; ?>
-                    </a>
+            <!-- Nav Item - Dashboard -->
+            <li class="nav-item">
+                <a class="nav-link" href="<?= base_url('modulo3/dashboard') ?>">
+                    <i class="fas fa-fw fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
 
-                    <!-- Toggle modo claro/oscuro (móvil) -->
-                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1 js-theme-toggle d-lg-none"
-                            title="Cambiar tema">
-                        <i class="bi bi-moon-fill js-theme-icon"></i>
-                    </button>
+            <!-- Divider -->
+            <hr class="sidebar-divider">
 
-                    <!-- Botón toggler -->
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topnav"
-                        aria-controls="topnav" aria-expanded="false" aria-label="Abrir menú">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                </div>
+            <!-- Heading -->
+            <?php if ($secGestion): ?>
+                <div class="sidebar-heading">Gestión</div>
             <?php endif; ?>
 
-            <div class="collapse navbar-collapse" id="topnav">
-                <!-- Menú móvil (colapsado) -->
-                <ul class="navbar-nav d-lg-none">
-                    <?php if (can('menu.maquiladora')): ?>
+            <!-- Mi Maquiladora -->
+            <?php if (can('menu.maquiladora')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('maquiladora') ?>">
+                        <i class="bi bi-building"></i>
+                        <span>Mi Maquiladora</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Clientes -->
+            <?php if (can('menu.ordenes_clientes')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('clientes') ?>">
+                        <i class="bi bi-people"></i>
+                        <span>Clientes</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Catálogo de Diseños -->
+            <?php if (can('menu.catalogo_disenos')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo2/catalogodisenos') ?>">
+                        <i class="bi bi-brush"></i>
+                        <span>Catálogo de Diseños</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Pedidos -->
+            <?php if (can('menu.pedidos')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo1/pedidos') ?>">
+                        <i class="bi bi-bag"></i>
+                        <span>Pedidos</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Pagos -->
+            <?php if (can('menu.pagos')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo1/pagos') ?>">
+                        <i class="bi bi-credit-card"></i>
+                        <span>Pagos</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Órdenes en proceso -->
+            <?php if (can('menu.ordenes')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo1/ordenes') ?>">
+                        <i class="bi bi-card-checklist"></i>
+                        <span>Órdenes en proceso</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Producción -->
+            <?php if (can('menu.produccion')): ?>
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseProduccion"
+                        aria-expanded="true" aria-controls="collapseProduccion">
+                        <i class="bi bi-gear-wide-connected"></i>
+                        <span>Producción</span>
+                    </a>
+                    <div id="collapseProduccion" class="collapse" aria-labelledby="headingProduccion"
+                        data-bs-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="<?= base_url('modulo1/produccion') ?>">Gestión Producción</a>
+                            <a class="collapse-item" href="<?= base_url('modulo3/cortes') ?>">Gestión de Cortes</a>
+                        </div>
+                    </div>
+                </li>
+            <?php endif; ?>
+
+            <!-- Divider -->
+            <?php if ($secGestion && $secMuestrasInspeccion): ?>
+                <hr class="sidebar-divider">
+            <?php endif; ?>
+
+            <!-- Heading - Calidad -->
+            <?php if ($secMuestrasInspeccion): ?>
+                <div class="sidebar-heading">Calidad</div>
+            <?php endif; ?>
+
+            <!-- Muestras -->
+            <?php if (can('menu.muestras')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('muestras') ?>">
+                        <i class="bi bi-palette2"></i>
+                        <span>Muestras</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Inspección -->
+            <?php if (can('menu.inspeccion')): ?>
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseInspeccion"
+                        aria-expanded="true" aria-controls="collapseInspeccion">
+                        <i class="bi bi-search"></i>
+                        <span>Inspección</span>
+                    </a>
+                    <div id="collapseInspeccion" class="collapse" aria-labelledby="headingInspeccion"
+                        data-bs-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="<?= base_url('modulo3/control-bultos') ?>">Inspección Bultos</a>
+                            <a class="collapse-item" href="<?= base_url('modulo3/inspeccion') ?>">Inspección Producto</a>
+                        </div>
+                    </div>
+                </li>
+            <?php endif; ?>
+
+            <!-- Incidencias -->
+            <?php if (can('menu.incidencias')): ?>
+                <?php
+                $roleName = current_role_name();
+                $roleNorm = $roleName ? mb_strtolower(trim($roleName)) : '';
+                ?>
+                <li class="nav-item">
+                    <?php if ($roleNorm === 'empleado'): ?>
+                        <a class="nav-link js-open-incidencia-modal" href="#">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <span>Incidencias</span>
+                        </a>
+                    <?php else: ?>
+                        <a class="nav-link" href="<?= base_url('modulo3/incidencias') ?>">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <span>Incidencias</span>
+                        </a>
+                    <?php endif; ?>
+                </li>
+            <?php endif; ?>
+
+            <!-- Divider -->
+            <?php if ($secMuestrasInspeccion && $secPlanificacion): ?>
+                <hr class="sidebar-divider">
+            <?php endif; ?>
+
+            <!-- Heading - Planificación -->
+            <?php if ($secPlanificacion): ?>
+                <div class="sidebar-heading">Planificación</div>
+            <?php endif; ?>
+
+            <!-- MRP -->
+            <?php if (can('menu.planificacion_materiales')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo3/mrp') ?>">
+                        <i class="bi bi-diagram-2"></i>
+                        <span>Planificación Materiales</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Proveedores -->
+            <?php if (can('menu.proveedores')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('proveedores') ?>">
+                        <i class="bi bi-truck-front"></i>
+                        <span>Proveedores</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Desperdicios -->
+            <?php if (can('menu.desperdicios')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo3/desperdicios') ?>">
+                        <i class="bi bi-recycle"></i>
+                        <span>Desperdicios</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Divider -->
+            <?php if ($secPlanificacion && $secMantenimiento): ?>
+                <hr class="sidebar-divider">
+            <?php endif; ?>
+
+            <!-- Heading - Mantenimiento -->
+            <?php if ($secMantenimiento): ?>
+                <div class="sidebar-heading">Mantenimiento</div>
+            <?php endif; ?>
+
+            <!-- Inventario Máquinas -->
+            <?php if (can('menu.inv_maquinas')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo3/mantenimiento_inventario') ?>">
+                        <i class="bi bi-tools"></i>
+                        <span>Inventario Máquinas</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Calendario Mantenimiento -->
+            <?php if ($secMantenimiento): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('mtto/calendario') ?>">
+                        <i class="bi bi-calendar3"></i>
+                        <span>Calendario Mtto</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Mantenimiento Correctivo -->
+            <?php if (can('menu.mant_correctivo')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo3/mantenimiento_correctivo') ?>">
+                        <i class="bi bi-wrench-adjustable-circle"></i>
+                        <span>Mant. Correctivo</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Divider -->
+            <?php if ($secMantenimiento && $secLogistica): ?>
+                <hr class="sidebar-divider">
+            <?php endif; ?>
+
+            <!-- Heading - Logística -->
+            <?php if ($secLogistica): ?>
+                <div class="sidebar-heading">Logística</div>
+            <?php endif; ?>
+
+            <!-- Preparación Envíos -->
+            <?php if (can('menu.logistica_preparacion')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo3/logistica_preparacion') ?>">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Prep. Envíos</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Gestión Envíos -->
+            <?php if (can('menu.logistica_gestion')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo3/logistica_gestion') ?>">
+                        <i class="bi bi-truck"></i>
+                        <span>Gestión Envíos</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Documentos Embarque -->
+            <?php if (can('menu.logistica_documentos')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo3/logistica_documentos') ?>">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>Docs. Embarque</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Inventario Almacén -->
+            <?php if (can('menu.inventario_almacen')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('almacen/inventario') ?>">
+                        <i class="bi bi-boxes"></i>
+                        <span>Inventario Almacén</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Divider -->
+            <?php if ($secLogistica && $secAdmin): ?>
+                <hr class="sidebar-divider">
+            <?php endif; ?>
+
+            <!-- Heading - Administración -->
+            <?php if ($secAdmin): ?>
+                <div class="sidebar-heading">Administración</div>
+            <?php endif; ?>
+
+            <!-- Reportes -->
+            <?php if (can('menu.reportes')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo3/reportes') ?>">
+                        <i class="bi bi-bar-chart-line"></i>
+                        <span>Reportes</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Roles -->
+            <?php if (can('menu.roles')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo11/roles') ?>">
+                        <i class="bi bi-person-gear"></i>
+                        <span>Roles</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Usuarios -->
+            <?php if (can('menu.usuarios')): ?>
+                <li class="nav-item">
+                    <a class="nav-link" href="<?= base_url('modulo11/usuarios') ?>">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>Gestión Usuarios</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider d-none d-md-block">
+
+            <!-- Sidebar Toggler (Sidebar) -->
+            <div class="text-center d-none d-md-inline">
+                <button class="rounded-circle border-0" id="sidebarToggle"></button>
+            </div>
+
+        </ul>
+        <!-- End of Sidebar -->
+
+        <!-- Content Wrapper -->
+        <div id="content-wrapper" class="d-flex flex-column">
+
+            <!-- Main Content -->
+            <div id="content">
+
+                <!-- Topbar -->
+                <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+
+                    <!-- Sidebar Toggle (Topbar) -->
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+
+                    <!-- Topbar Navbar -->
+                    <ul class="navbar-nav ml-auto">
+
+                        <!-- Nav Item - Alerts -->
+                        <li class="nav-item dropdown no-arrow mx-1">
+                            <a class="nav-link" href="<?= base_url('modulo3/notificaciones2') ?>">
+                                <i class="fas fa-bell fa-fw"></i>
+                                <!-- Counter - Alerts -->
+                                <?php if ($notifCount > 0): ?>
+                                    <span class="badge badge-danger badge-counter"><?= esc($notifCount) ?></span>
+                                <?php endif; ?>
+                            </a>
+                        </li>
+
+                        <!-- Nav Item - Theme Toggle -->
                         <li class="nav-item">
-                            <a class="nav-link" href="<?= site_url('maquiladora') ?>">
-                                <i class="bi bi-building me-1"></i> Mi Maquiladora
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.catalogo_disenos')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo2/catalogodisenos')) ?>">
-                                <i class="bi bi-brush me-2"></i>Catálogo de Diseños
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.pedidos')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/pedidos')) ?>">
-                                <i class="bi bi-bag me-2"></i>Pedidos
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.pagos')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/pagos')) ?>">
-                                <i class="bi bi-credit-card me-2"></i>Pagos
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.ordenes_clientes')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('clientes')) ?>">
-                                <i class="bi bi-people me-2"></i>Clientes
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.ordenes')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/ordenes')) ?>">
-                                <i class="bi bi-card-checklist me-2"></i>Órdenes en proceso
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if (can('menu.produccion')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo1/produccion')) ?>">
-                                <i class="bi bi-gear-wide-connected me-2"></i>Producción
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/cortes')) ?>">
-                                <i class="bi bi-scissors me-2"></i>Gestión de Cortes
-                            </a>
-                        </li>
-                    <?php endif; ?>
-                    <?php if ($secGestion && $secMuestrasInspeccion): ?>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.muestras')): ?>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" href="<?= esc(base_url('muestras')) ?>">
-                                <i class="bi bi-palette2 me-2"></i>Muestras
-                            </a>
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.inspeccion')): ?>
-                        
-                        <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/control-bultos')) ?>">
-                            <i class="bi bi-box me-2"></i>Inspección Bultos
-                        </a>
-                        <a class="nav-link text-dark" href="<?= esc(base_url('modulo3/inspeccion')) ?>">
-                            <i class="bi bi-search me-2"></i>Inspección de producto
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.incidencias')): ?>
-                        <?php
-                        $roleName = current_role_name();
-                        $roleNorm = $roleName ? mb_strtolower(trim($roleName)) : '';
-                        ?>
-                        <?php if ($roleNorm === 'empleado'): ?>
-                            <a class="dropdown-item js-open-incidencia-modal" href="#">
-                                <i class="bi bi-exclamation-triangle me-2"></i>Incidencias
-                            </a>
-                        <?php else: ?>
-                            <a class="dropdown-item" href="<?= esc(base_url('modulo3/incidencias')) ?>">
-                                <i class="bi bi-exclamation-triangle me-2"></i>Incidencias
-                            </a>
-                        <?php endif; ?>
-                    <?php endif; ?>
-
-                    <?php if ($secIncidencias && $secPlanificacion): ?>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.planificacion_materiales')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/mrp')) ?>">
-                            <i class="bi bi-diagram-2 me-2"></i>Planificación materiales
-                        </a>
-                    <?php endif; ?>
-
-                    <!-- NUEVO: Proveedores (escritorio - accesos rápidos) -->
-                    <?php if (can('menu.proveedores')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('proveedores')) ?>">
-                            <i class="bi bi-truck-front me-2"></i>Proveedores
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.desperdicios')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/desperdicios')) ?>">
-                            <i class="bi bi-recycle me-2"></i>Desperdicios
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if ($secPlanificacion && $secMantenimiento): ?>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.inv_maquinas')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/mantenimiento_inventario')) ?>">
-                            <i class="bi bi-tools me-2"></i>Inventario Maq.
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if ($secMantenimiento): ?>
-                        <!-- SOLO Calendario Mtto (Prog. Mtto eliminado) -->
-                        <a class="dropdown-item" href="<?= esc(base_url('mtto/calendario')) ?>">
-                            <i class="bi bi-calendar3 me-2"></i>Calendario Mtto
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.mant_correctivo')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/mantenimiento_correctivo')) ?>">
-                            <i class="bi bi-wrench-adjustable-circle me-2"></i>Mant. Correctivo
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if ($secMantenimiento && $secLogistica): ?>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.logistica_preparacion')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/logistica_preparacion')) ?>">
-                            <i class="bi bi-box-seam me-2"></i>Prep. Envíos
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.logistica_gestion')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/logistica_gestion')) ?>">
-                            <i class="bi bi-truck me-2"></i>Gestión Envíos
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.logistica_documentos')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/logistica_documentos')) ?>">
-                            <i class="bi bi-file-earmark-text me-2"></i>Docs. Embarque
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.inventario_almacen')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('almacen/inventario')) ?>">
-                            <i class="bi bi-boxes me-2"></i>Inventario Almacén
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if ($secLogistica && $secAdmin): ?>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.reportes')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/reportes')) ?>">
-                            <i class="bi bi-bar-chart-line me-2"></i>Reportes
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.roles')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo11/roles')) ?>">
-                            <i class="bi bi-person-gear me-2"></i>Roles
-                        </a>
-                    <?php endif; ?>
-
-                    <?php if (can('menu.usuarios')): ?>
-                        <a class="dropdown-item" href="<?= esc(base_url('modulo11/usuarios')) ?>">
-                            <i class="bi bi-shield-lock me-2"></i>Gestión Usuarios
-                        </a>
-                    <?php endif; ?>
-                </ul>
-
-                <!-- Menú escritorio -->
-                <?php if (session()->get('logged_in') || session()->get('user_id')): ?>
-                    <ul class="navbar-nav ms-auto d-none d-lg-flex align-items-lg-center">
-                        <!-- Usuario -->
-                        <li class="nav-item dropdown ms-lg-2">
-                            <a class="nav-link d-flex align-items-center text-dark text-decoration-none position-relative hover-color"
-                                href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false"
-                                title="Menú de usuario">
-                                <i class="fa-solid fa-user-circle me-2 fs-5" aria-hidden="true"></i>
-                                <span class="d-none d-lg-inline fw-medium">
-                                    <?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?>
-                                </span>
-                            </a>
-
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 animate__animated animate__fadeIn"
-                                aria-labelledby="userMenu">
-                                <li>
-                                    <a class="dropdown-item d-flex align-items-center"
-                                        href="<?= esc(base_url('modulo1/perfilempleado')) ?>">
-                                        <i class="fa-solid fa-id-badge me-2 text-primary"></i> Perfil
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item d-flex align-items-center text-danger"
-                                        href="<?= esc(base_url('logout')) ?>">
-                                        <i class="fa-solid fa-right-from-bracket me-2"></i> Cerrar sesión
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-
-                        <!-- Notificaciones (ACTUALIZADO) -->
-                        <li class="nav-item ms-lg-2">
-                            <a class="nav-link text-dark position-relative d-inline-block hover-color"
-                                href="<?= esc(base_url('modulo3/notificaciones2')) ?>" title="Notificaciones"
-                                data-bs-toggle="tooltip" data-bs-placement="bottom" aria-label="Notificaciones">
-                                <i class="bi bi-bell fs-5" aria-hidden="true"></i>
-                                <span
-                                    class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    <?= esc($notifCount) ?>
-                                    <span class="visually-hidden">notificaciones</span>
-                                </span>
-                            </a>
-                        </li>
-
-                        <!-- Toggle modo claro/oscuro (escritorio) -->
-                        <li class="nav-item ms-lg-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center js-theme-toggle"
-                                    title="Cambiar tema">
+                            <button type="button" class="btn btn-link nav-link js-theme-toggle" title="Cambiar tema">
                                 <i class="bi bi-moon-fill js-theme-icon"></i>
                             </button>
                         </li>
 
-                        <!-- Accesos rápidos -->
-                        <li class="nav-item dropdown ms-lg-2">
-                            <a class="nav-link text-dark d-flex align-items-center hover-color" href="#" id="quickMenu"
-                                role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Accesos rápidos">
-                                <i class="fa fa-bars fs-5" aria-hidden="true"></i>
+                        <div class="topbar-divider d-none d-sm-block"></div>
+
+                        <!-- Nav Item - User Information -->
+                        <li class="nav-item dropdown no-arrow">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">
+                                    <?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?>
+                                </span>
+                                <i class="fas fa-user-circle fa-2x"></i>
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="quickMenu"
-                                style="min-width: 280px;">
-                                <?php if (can('menu.maquiladora')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('maquiladora')) ?>">
-                                        <i class="bi bi-building me-1"></i> Mi Maquiladora
-                                    </a>
-                                    <div class="dropdown-divider"></div>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.ordenes_clientes')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('clientes')) ?>">
-                                        <i class="bi bi-people me-2"></i>Clientes
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.catalogo_disenos')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo2/catalogodisenos')) ?>">
-                                        <i class="bi bi-brush me-2"></i>Catálogo de Diseños
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.pedidos')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo1/pedidos')) ?>">
-                                        <i class="bi bi-bag me-2"></i>Pedidos
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.pagos')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo1/pagos')) ?>">
-                                        <i class="bi bi-credit-card me-2"></i>Pagos
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.ordenes')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo1/ordenes')) ?>">
-                                        <i class="bi bi-card-checklist me-2"></i>Órdenes en proceso
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.produccion')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo1/produccion')) ?>">
-                                        <i class="bi bi-gear-wide-connected me-2"></i>Producción
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.produccion')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/cortes')) ?>">
-                                        <i class="bi bi-scissors me-2"></i>Gestión de Cortes
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if ($secGestion && $secMuestrasInspeccion): ?>
-                                    <div class="dropdown-divider"></div>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.muestras')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('muestras')) ?>">
-                                        <i class="bi bi-palette2 me-2"></i>Muestras
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.inspeccion')): ?>
-                                    
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/control-bultos')) ?>">
-                                        <i class="bi bi-box me-2"></i>Inspección Bultos
-                                    </a>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/inspeccion')) ?>">
-                                        <i class="bi bi-search me-2"></i>Inspección de producto
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.incidencias')): ?>
-                                    <?php
-                                    $roleName = current_role_name();
-                                    $roleNorm = $roleName ? mb_strtolower(trim($roleName)) : '';
-                                    ?>
-                                    <?php if ($roleNorm === 'empleado'): ?>
-                                        <a class="dropdown-item js-open-incidencia-modal" href="#">
-                                            <i class="bi bi-exclamation-triangle me-2"></i>Incidencias
-                                        </a>
-                                    <?php else: ?>
-                                        <a class="dropdown-item" href="<?= esc(base_url('modulo3/incidencias')) ?>">
-                                            <i class="bi bi-exclamation-triangle me-2"></i>Incidencias
-                                        </a>
-                                    <?php endif; ?>
-                                <?php endif; ?>
-                                <?php if ($secIncidencias && $secPlanificacion): ?>
-                                    <div class="dropdown-divider"></div>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.planificacion_materiales')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/mrp')) ?>">
-                                        <i class="bi bi-diagram-2 me-2"></i>Planificación materiales
-                                    </a>
-                                <?php endif; ?>
-
-                                <!-- NUEVO: Proveedores (escritorio - accesos rápidos) -->
-                                <?php if (can('menu.proveedores')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('proveedores')) ?>">
-                                        <i class="bi bi-truck-front me-2"></i>Proveedores
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.desperdicios')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/desperdicios')) ?>">
-                                        <i class="bi bi-recycle me-2"></i>Desperdicios
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if ($secPlanificacion && $secMantenimiento): ?>
-                                    <div class="dropdown-divider"></div>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.inv_maquinas')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/mantenimiento_inventario')) ?>">
-                                        <i class="bi bi-tools me-2"></i>Inventario Maq.
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if ($secMantenimiento): ?>
-                                    <!-- SOLO Calendario Mtto (Prog. Mtto eliminado) -->
-                                    <a class="dropdown-item" href="<?= esc(base_url('mtto/calendario')) ?>">
-                                        <i class="bi bi-calendar3 me-2"></i>Calendario Mtto
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.mant_correctivo')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/mantenimiento_correctivo')) ?>">
-                                        <i class="bi bi-wrench-adjustable-circle me-2"></i>Mant. Correctivo
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if ($secMantenimiento && $secLogistica): ?>
-                                    <div class="dropdown-divider"></div>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.logistica_preparacion')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/logistica_preparacion')) ?>">
-                                        <i class="bi bi-box-seam me-2"></i>Prep. Envíos
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.logistica_gestion')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/logistica_gestion')) ?>">
-                                        <i class="bi bi-truck me-2"></i>Gestión Envíos
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.logistica_documentos')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/logistica_documentos')) ?>">
-                                        <i class="bi bi-file-earmark-text me-2"></i>Docs. Embarque
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.inventario_almacen')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('almacen/inventario')) ?>">
-                                        <i class="bi bi-boxes me-2"></i>Inventario Almacén
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if ($secLogistica && $secAdmin): ?>
-                                    <div class="dropdown-divider"></div>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.reportes')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo3/reportes')) ?>">
-                                        <i class="bi bi-bar-chart-line me-2"></i>Reportes
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.roles')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo11/roles')) ?>">
-                                        <i class="bi bi-person-gear me-2"></i>Roles
-                                    </a>
-                                <?php endif; ?>
-
-                                <?php if (can('menu.usuarios')): ?>
-                                    <a class="dropdown-item" href="<?= esc(base_url('modulo11/usuarios')) ?>">
-                                        <i class="bi bi-shield-lock me-2"></i>Gestión Usuarios
-                                    </a>
-                                <?php endif; ?>
-
+                            <!-- Dropdown - User Information -->
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                aria-labelledby="userDropdown">
+                                <a class="dropdown-item" href="<?= base_url('modulo1/perfilempleado') ?>">
+                                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Perfil
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="<?= base_url('logout') ?>">
+                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Cerrar sesión
+                                </a>
                             </div>
                         </li>
+
                     </ul>
-                <?php endif; ?>
+
+                </nav>
+                <!-- End of Topbar -->
+
+                <!-- Begin Page Content -->
+                <div class="container-fluid">
+                    <?= $this->renderSection('content') ?>
+                </div>
+                <!-- /.container-fluid -->
+
             </div>
+            <!-- End of Main Content -->
+
+            <!-- Footer -->
+            <footer class="sticky-footer bg-white">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>© <?= date('Y') ?> Maquiladora</span>
+                    </div>
+                </div>
+            </footer>
+            <!-- End of Footer -->
+
         </div>
-    </nav>
+        <!-- End of Content Wrapper -->
 
-    <main class="container py-4">
-        <?= $this->renderSection('content') ?>
-    </main>
+    </div>
+    <!-- End of Page Wrapper -->
 
-    <footer class="border-top py-3 bg-white">
-        <div class="container small text-muted">© <?= date('Y') ?> Maquiladora</div>
-    </footer>
+    <!-- Scroll to Top Button-->
+    <a class="scroll-to-top rounded" href="#page-top">
+        <i class="fas fa-angle-up"></i>
+    </a>
 
     <!-- Scripts: cargados al final para mejor performance -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js" defer></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <!-- Core plugin JavaScript-->
+    <script src="<?= base_url('vendor/jquery-easing/jquery.easing.min.js') ?>"></script>
+
+    <!-- Custom scripts for all pages-->
+    <script src="<?= base_url('js/sb-admin-2.min.js') ?>"></script>
 
     <!-- Modo oscuro / claro -->
     <script>
@@ -786,7 +1177,7 @@
                     btn.addEventListener('click', function () {
                         const current = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
                         const next = current === 'dark' ? 'light' : 'dark';
-                        try { localStorage.setItem(STORAGE_KEY, next); } catch (e) {}
+                        try { localStorage.setItem(STORAGE_KEY, next); } catch (e) { }
                         applyTheme(next);
                     });
                 });
