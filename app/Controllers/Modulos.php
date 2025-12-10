@@ -263,109 +263,109 @@ class Modulos extends BaseController
                     $rowNext = $db->query('SELECT COALESCE(MAX(id),0)+1 AS nextId FROM usuario_rol')->getRowArray();
                     if ($rowNext && isset($rowNext['nextId'])) {
                         $nextId = (int) $rowNext['nextId'];
+                    }
+                } catch (\Throwable $e) {
+                    $nextId = time();
                 }
-            } catch (\Throwable $e) {
-                $nextId = time();
+
+                $okRole = $db->table('usuario_rol')->insert([
+                    'id' => $nextId,
+                    'usuarioIdFK' => $id,
+                    'rolIdFK' => (int) $rolId,
+                ]);
+                if (!$okRole) {
+                    $dbErr = $db->error();
+                    $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbErr['message'] : 'No se pudo asignar el rol';
+                    throw new \Exception($dbMsg);
+                }
             }
 
-            $okRole = $db->table('usuario_rol')->insert([
-                'id' => $nextId,
-                'usuarioIdFK' => $id,
-                'rolIdFK' => (int) $rolId,
-            ]);
-            if (!$okRole) {
+            $db->transComplete();
+            if ($db->transStatus() === false) {
                 $dbErr = $db->error();
-                $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbErr['message'] : 'No se pudo asignar el rol';
+                $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbMsg : 'Error en la transacción';
+                try {
+                    log_message('error', 'm11_actualizar_usuario transStatus=false: ' . $dbMsg);
+                } catch (\Throwable $e) {
+                }
                 throw new \Exception($dbMsg);
             }
-        }
 
-        $db->transComplete();
-        if ($db->transStatus() === false) {
-            $dbErr = $db->error();
-            $dbMsg = isset($dbErr['message']) && $dbErr['message'] ? $dbMsg : 'Error en la transacción';
+            // Crear notificación para el usuario actualizado
             try {
-                log_message('error', 'm11_actualizar_usuario transStatus=false: ' . $dbMsg);
+                $notificationService = new NotificationService();
+                $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
+
+                $notificationService->notifyUsuarioActualizado(
+                    $maquiladoraId,
+                    $nombre,
+                    $email
+                );
             } catch (\Throwable $e) {
+                // No fallar la actualización del usuario si hay error en la notificación
+                log_message('warning', 'Error al crear notificación de usuario actualizado: ' . $e->getMessage());
             }
-            throw new \Exception($dbMsg);
-        }
 
-        // Crear notificación para el usuario actualizado
-        try {
-            $notificationService = new NotificationService();
-            $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
-            
-            $notificationService->notifyUsuarioActualizado(
-                $maquiladoraId,
-                $nombre,
-                $email
-            );
+            return $this->response->setJSON(['success' => true, 'message' => 'Usuario y rol actualizados correctamente']);
         } catch (\Throwable $e) {
-            // No fallar la actualización del usuario si hay error en la notificación
-            log_message('warning', 'Error al crear notificación de usuario actualizado: ' . $e->getMessage());
+            try {
+                $db->transRollback();
+            } catch (\Throwable $e3) {
+            }
+            $errMsg = $e->getMessage();
+            try {
+                log_message('error', 'm11_actualizar_usuario exception: ' . $errMsg);
+            } catch (\Throwable $e2) {
+            }
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al actualizar: ' . $errMsg,
+            ]);
         }
-
-        return $this->response->setJSON(['success' => true, 'message' => 'Usuario y rol actualizados correctamente']);
-    } catch (\Throwable $e) {
-        try {
-            $db->transRollback();
-        } catch (\Throwable $e3) {
-        }
-        $errMsg = $e->getMessage();
-        try {
-            log_message('error', 'm11_actualizar_usuario exception: ' . $errMsg);
-        } catch (\Throwable $e2) {
-        }
-        return $this->response->setStatusCode(500)->setJSON([
-            'success' => false,
-            'message' => 'Error al actualizar: ' . $errMsg,
-        ]);
-    }
-}
-
-/**
- * Eliminar usuario (lógica): marca deleted_at o, si no existe, active=0
- * Entrada: POST id
- * Salida: JSON { success, message }
- */
-public function m11_eliminar_usuario()
-{
-    // Aceptar la petición sin forzar método, la ruta ya limita a POST
-    $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
-    if ($id <= 0) {
-        return $this->response->setStatusCode(400)->setJSON([
-            'success' => false,
-            'message' => 'ID inválido'
-        ]);
     }
 
-    $db = \Config\Database::connect();
-    try {
-        // Intentar soft delete con deleted_at
-        $ok = false;
+    /**
+     * Eliminar usuario (lógica): marca deleted_at o, si no existe, active=0
+     * Entrada: POST id
+     * Salida: JSON { success, message }
+     */
+    public function m11_eliminar_usuario()
+    {
+        // Aceptar la petición sin forzar método, la ruta ya limita a POST
+        $id = (int) ($this->request->getPost('id') ?? $this->request->getVar('id') ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'ID inválido'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
         try {
-            $ok = $db->table('users')->where('id', $id)
-                ->update(['deleted_at' => date('Y-m-d H:i:s')]);
-        } catch (\Throwable $e) {
+            // Intentar soft delete con deleted_at
             $ok = false;
-        }
-        if (!$ok) {
-            // Fallback: desactivar
-            $db->table('users')->where('id', $id)->update(['active' => 0]);
-        }
+            try {
+                $ok = $db->table('users')->where('id', $id)
+                    ->update(['deleted_at' => date('Y-m-d H:i:s')]);
+            } catch (\Throwable $e) {
+                $ok = false;
+            }
+            if (!$ok) {
+                // Fallback: desactivar
+                $db->table('users')->where('id', $id)->update(['active' => 0]);
+            }
 
-        return $this->response->setJSON([
-            'success' => true,
-            'message' => 'Usuario eliminado correctamente'
-        ]);
-    } catch (\Throwable $e) {
-        return $this->response->setStatusCode(500)->setJSON([
-            'success' => false,
-            'message' => 'Error al eliminar: ' . $e->getMessage(),
-        ]);
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Usuario eliminado correctamente'
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al eliminar: ' . $e->getMessage(),
+            ]);
+        }
     }
-}
 
     /**
      * Generar Excel del pedido
@@ -908,12 +908,12 @@ public function m11_eliminar_usuario()
         // Obtener ID de maquiladora y usuario de la sesión (usando el mismo patrón que otros controladores)
         $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
         $userId = session()->get('user_id');
-        
+
         // Debug: Log para verificar los IDs de sesión
-        log_message('debug', 'Notificaciones - Session IDs: maquiladora_id=' . session()->get('maquiladora_id') . 
-                   ', maquiladoraID=' . session()->get('maquiladoraID') . 
-                   ', user_id=' . session()->get('user_id'));
-        
+        log_message('debug', 'Notificaciones - Session IDs: maquiladora_id=' . session()->get('maquiladora_id') .
+            ', maquiladoraID=' . session()->get('maquiladoraID') .
+            ', user_id=' . session()->get('user_id'));
+
         // Validar que tengamos IDs válidos
         if (!$maquiladoraId || !$userId) {
             log_message('error', 'Notificaciones - Faltan datos de sesión: maquiladoraId=' . $maquiladoraId . ', userId=' . $userId);
@@ -924,31 +924,31 @@ public function m11_eliminar_usuario()
                 'error' => 'No se pudo identificar tu sesión. Por favor inicia sesión nuevamente.'
             ]));
         }
-        
+
         // Cargar modelo de notificaciones
         $notificationModel = new \App\Models\NotificacionModel();
-        
+
         try {
             // Debug: Log para verificar la consulta
             log_message('debug', 'Notificaciones - Consultando para maquiladoraId: ' . (int) $maquiladoraId . ', userId: ' . (int) $userId);
-            
+
             // Obtener notificaciones con estado de lectura para el usuario actual
             $notifications = $notificationModel->getWithReadStatus(
                 (int) $maquiladoraId,
                 (int) $userId,
                 50 // Límite de notificaciones a mostrar
             );
-            
+
             // Debug: Log resultados
             log_message('debug', 'Notificaciones - Encontradas: ' . count($notifications) . ' notificaciones');
-            
+
             // Formatear las notificaciones para la vista
             $items = [];
             foreach ($notifications as $notif) {
                 // Determinar color según nivel
                 $color = '#4dabf7'; // Default azul
                 $nivel = 'Media';
-                
+
                 switch (strtolower($notif['nivel'] ?? '')) {
                     case 'critical':
                     case 'crítica':
@@ -971,10 +971,10 @@ public function m11_eliminar_usuario()
                         $nivel = 'Media';
                         break;
                 }
-                
+
                 // Formatear tiempo
                 $timeAgo = $this->timeAgo($notif['created_at']);
-                
+
                 $items[] = [
                     'id' => $notif['id'],
                     'nivel' => $nivel,
@@ -985,7 +985,7 @@ public function m11_eliminar_usuario()
                     'created_at' => $notif['created_at']
                 ];
             }
-            
+
         } catch (\Throwable $e) {
             // En caso de error, mostrar array vacío
             log_message('error', 'Error al cargar notificaciones: ' . $e->getMessage());
@@ -999,7 +999,7 @@ public function m11_eliminar_usuario()
             'debug_maquiladora_id' => $maquiladoraId // Para depuración en la vista
         ]));
     }
-    
+
     /**
      * Helper: Convert timestamp to "time ago" format
      */
@@ -1057,6 +1057,298 @@ public function m11_eliminar_usuario()
         }
 
         return $this->response->download($filepath, null)->setFileName('OC_' . str_pad($id, 6, '0', STR_PAD_LEFT) . '.pdf');
+    }
+
+    /**
+     * Generar OC desde un requerimiento de material
+     * POST /modulo3/mrp/requerimientos/{id}/generar-oc
+     */
+    public function generarOCDesdeRequerimiento($id)
+    {
+        $id = (int) $id;
+
+        if ($id <= 0) {
+            return redirect()->to('/modulo3/mrp')->with('error', 'ID de requerimiento inválido');
+        }
+
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+        $ocModel = new \App\Models\MrpOcModel();
+
+        try {
+            // Obtener el requerimiento
+            $req = $reqModel->find($id);
+
+            if (!$req) {
+                return redirect()->to('/modulo3/mrp')->with('error', 'Requerimiento no encontrado');
+            }
+
+            // Validar que haya cantidad a comprar
+            $cantidadComprar = (float) ($req['comprar'] ?? 0);
+            if ($cantidadComprar <= 0) {
+                return redirect()->to('/modulo3/mrp')->with('error', 'No hay cantidad a comprar para este requerimiento');
+            }
+
+            // Crear la OC con los datos del requerimiento
+            $ocData = [
+                'prov' => 'Proveedor por definir', // Valor por defecto, puede mejorarse
+                'mat' => $req['mat'],
+                'cant' => $cantidadComprar,
+                'u' => $req['u'],
+                'eta' => date('Y-m-d', strtotime('+7 days')), // ETA por defecto: 7 días
+                'pdf_path' => null
+            ];
+
+            // Insertar la OC primero para obtener el ID
+            $ocId = $ocModel->insert($ocData);
+
+            if (!$ocId) {
+                throw new \Exception('No se pudo crear la orden de compra');
+            }
+
+            // Obtener la OC recién creada
+            $oc = $ocModel->find($ocId);
+
+            // Generar el PDF
+            $html = view('pdf/orden_compra', ['oc' => $oc]);
+
+            // Configurar Dompdf
+            $options = new \Dompdf\Options();
+            $options->set('isRemoteEnabled', true);
+            $options->set('isHtml5ParserEnabled', true);
+
+            $dompdf = new \Dompdf\Dompdf($options);
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->setPaper('letter', 'portrait');
+            $dompdf->render();
+
+            // Guardar el PDF
+            $pdfOutput = $dompdf->output();
+
+            // Crear directorio si no existe
+            $uploadPath = WRITEPATH . 'uploads/mrp_oc/';
+            if (!is_dir($uploadPath)) {
+                mkdir($uploadPath, 0755, true);
+            }
+
+            // Nombre del archivo
+            $filename = 'OC_' . str_pad($ocId, 6, '0', STR_PAD_LEFT) . '_' . date('Ymd_His') . '.pdf';
+            $filepath = $uploadPath . $filename;
+
+            // Guardar el archivo
+            file_put_contents($filepath, $pdfOutput);
+
+            // Actualizar la OC con la ruta del PDF
+            $relativePath = 'uploads/mrp_oc/' . $filename;
+            $ocModel->update($ocId, ['pdf_path' => $relativePath]);
+
+            return redirect()->to('/modulo3/mrp')->with('success', 'Orden de compra generada correctamente con PDF');
+
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al generar OC desde requerimiento: ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al generar la orden de compra: ' . $e->getMessage());
+        }
+    }
+
+
+    /**
+     * Crear un nuevo requerimiento de material
+     * POST /modulo3/mrp/requerimientos/crear
+     */
+    public function crearRequerimiento()
+    {
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+
+        try {
+            $data = [
+                'mat' => $this->request->getPost('mat'),
+                'u' => $this->request->getPost('u'),
+                'necesidad' => (float) $this->request->getPost('necesidad'),
+                'stock' => (float) $this->request->getPost('stock'),
+                'comprar' => (float) $this->request->getPost('comprar'),
+            ];
+
+            $reqModel->insert($data);
+
+            return redirect()->to('/modulo3/mrp')->with('success', 'Requerimiento creado correctamente');
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al crear requerimiento: ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al crear el requerimiento');
+        }
+    }
+
+    /**
+     * Editar un requerimiento existente
+     * POST /modulo3/mrp/requerimientos/{id}/editar
+     */
+    public function editarRequerimiento($id)
+    {
+        $id = (int) $id;
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+
+        try {
+            $data = [
+                'mat' => $this->request->getPost('mat'),
+                'u' => $this->request->getPost('u'),
+                'necesidad' => (float) $this->request->getPost('necesidad'),
+                'stock' => (float) $this->request->getPost('stock'),
+                'comprar' => (float) $this->request->getPost('comprar'),
+            ];
+
+            $reqModel->update($id, $data);
+
+            return redirect()->to('/modulo3/mrp')->with('success', 'Requerimiento actualizado correctamente');
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al editar requerimiento: ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al actualizar el requerimiento');
+        }
+    }
+
+    /**
+     * Eliminar un requerimiento
+     * POST /modulo3/mrp/requerimientos/{id}/eliminar
+     */
+    public function eliminarRequerimiento($id)
+    {
+        $id = (int) $id;
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+
+        try {
+            $reqModel->delete($id);
+
+            return redirect()->to('/modulo3/mrp')->with('success', 'Requerimiento eliminado correctamente');
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al eliminar requerimiento: ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al eliminar el requerimiento');
+        }
+    }
+
+    /**
+     * Obtener un requerimiento en formato JSON
+     * GET /modulo3/mrp/requerimientos/{id}/json
+     */
+    public function requerimientoJson($id)
+    {
+        $id = (int) $id;
+        $reqModel = new \App\Models\MrpRequerimientoModel();
+
+        try {
+            $req = $reqModel->find($id);
+
+            if (!$req) {
+                return $this->response->setStatusCode(404)->setJSON(['error' => 'Requerimiento no encontrado']);
+            }
+
+            return $this->response->setJSON($req);
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al obtener requerimiento: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al obtener el requerimiento']);
+        }
+    }
+
+    /**
+     * Crear una nueva orden de compra
+     * POST /modulo3/mrp/oc/crear
+     */
+    public function crearOC()
+    {
+        $ocModel = new \App\Models\MrpOcModel();
+
+        try {
+            $data = [
+                'prov' => $this->request->getPost('prov'),
+                'mat' => $this->request->getPost('mat'),
+                'cant' => (float) $this->request->getPost('cant'),
+                'u' => $this->request->getPost('u'),
+                'eta' => $this->request->getPost('eta'),
+                'pdf_path' => null
+            ];
+
+            $ocModel->insert($data);
+
+            return redirect()->to('/modulo3/mrp')->with('success', 'Orden de compra creada correctamente');
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al crear OC: ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al crear la orden de compra');
+        }
+    }
+
+    /**
+     * Editar una orden de compra existente
+     * POST /modulo3/mrp/oc/{id}/editar
+     */
+    public function editarOC($id)
+    {
+        $id = (int) $id;
+        $ocModel = new \App\Models\MrpOcModel();
+
+        try {
+            $data = [
+                'prov' => $this->request->getPost('prov'),
+                'mat' => $this->request->getPost('mat'),
+                'cant' => (float) $this->request->getPost('cant'),
+                'u' => $this->request->getPost('u'),
+                'eta' => $this->request->getPost('eta'),
+            ];
+
+            $ocModel->update($id, $data);
+
+            return redirect()->to('/modulo3/mrp')->with('success', 'Orden de compra actualizada correctamente');
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al editar OC: ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al actualizar la orden de compra');
+        }
+    }
+
+    /**
+     * Eliminar una orden de compra
+     * POST /modulo3/mrp/oc/{id}/eliminar
+     */
+    public function eliminarOC($id)
+    {
+        $id = (int) $id;
+        $ocModel = new \App\Models\MrpOcModel();
+
+        try {
+            // Obtener la OC para eliminar el PDF si existe
+            $oc = $ocModel->find($id);
+
+            if ($oc && !empty($oc['pdf_path'])) {
+                $pdfPath = WRITEPATH . $oc['pdf_path'];
+                if (file_exists($pdfPath)) {
+                    @unlink($pdfPath);
+                }
+            }
+
+            $ocModel->delete($id);
+
+            return redirect()->to('/modulo3/mrp')->with('success', 'Orden de compra eliminada correctamente');
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al eliminar OC: ' . $e->getMessage());
+            return redirect()->to('/modulo3/mrp')->with('error', 'Error al eliminar la orden de compra');
+        }
+    }
+
+    /**
+     * Obtener una orden de compra en formato JSON
+     * GET /modulo3/mrp/oc/{id}/json
+     */
+    public function ocJson($id)
+    {
+        $id = (int) $id;
+        $ocModel = new \App\Models\MrpOcModel();
+
+        try {
+            $oc = $ocModel->find($id);
+
+            if (!$oc) {
+                return $this->response->setStatusCode(404)->setJSON(['error' => 'Orden de compra no encontrada']);
+            }
+
+            return $this->response->setJSON($oc);
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al obtener OC: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al obtener la orden de compra']);
+        }
     }
 
     public function desperdicios()
@@ -1379,11 +1671,11 @@ public function m11_eliminar_usuario()
             $totalPost = ($totalPost === '' || $totalPost === null) ? null : (float) $totalPost;
 
             $ocData = [
-                'folio'   => $this->request->getPost('folio') ?? null,
-                'fecha'   => $this->request->getPost('fecha') ?? null,
+                'folio' => $this->request->getPost('folio') ?? null,
+                'fecha' => $this->request->getPost('fecha') ?? null,
                 'estatus' => $this->request->getPost('estatus'),
-                'moneda'  => $this->request->getPost('moneda') ?? null,
-                'total'   => $totalPost,
+                'moneda' => $this->request->getPost('moneda') ?? null,
+                'total' => $totalPost,
             ];
 
             if (empty($ocData['fecha'])) {
@@ -1435,14 +1727,15 @@ public function m11_eliminar_usuario()
                             try {
                                 $db->table('OrdenCompra')->where('id', (int) $id)->update($ocData);
                                 $rowsOC = $db->affectedRows();
-                            } catch (\Throwable $eQB2) {}
+                            } catch (\Throwable $eQB2) {
+                            }
                         }
                     }
 
                     // Actualizar/crear OP
-                    $opCantidadPlan  = $this->request->getPost('op_cantidadPlan');
+                    $opCantidadPlan = $this->request->getPost('op_cantidadPlan');
                     $disenoVersionId = $this->request->getPost('disenoVersionId');
-                    $disenoId        = $this->request->getPost('disenoId');
+                    $disenoId = $this->request->getPost('disenoId');
 
                     if ((!$disenoVersionId || $disenoVersionId == '') && $disenoId) {
                         try {
@@ -1453,11 +1746,12 @@ public function m11_eliminar_usuario()
                             if ($verRow && isset($verRow['id'])) {
                                 $disenoVersionId = $verRow['id'];
                             }
-                        } catch (\Throwable $eVer) {}
+                        } catch (\Throwable $eVer) {
+                        }
                     }
 
                     $opFechaFinPlanRaw = $this->request->getPost('op_fechaFinPlan');
-                    $opFechaFinPlan    = null;
+                    $opFechaFinPlan = null;
                     if ($opFechaFinPlanRaw !== null && $opFechaFinPlanRaw !== '') {
                         $ff = trim((string) $opFechaFinPlanRaw);
                         if (strpos($ff, '/') !== false) {
@@ -1479,11 +1773,13 @@ public function m11_eliminar_usuario()
                         $op = null;
                         try {
                             $op = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                        } catch (\Throwable $e1) {}
+                        } catch (\Throwable $e1) {
+                        }
                         if (!$op) {
                             try {
                                 $op = $db->query('SELECT * FROM OrdenProduccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
-                            } catch (\Throwable $e2) {}
+                            } catch (\Throwable $e2) {
+                            }
                         }
 
                         if ($op) {
@@ -1503,13 +1799,13 @@ public function m11_eliminar_usuario()
                             }
                         } else {
                             $newOp = [
-                                'ordenCompraId'   => (int) $id,
+                                'ordenCompraId' => (int) $id,
                                 'disenoVersionId' => ($disenoVersionId !== null && (int) $disenoVersionId > 0) ? (int) $disenoVersionId : null,
-                                'folio'           => null,
-                                'cantidadPlan'    => ($opCantidadPlan !== null && $opCantidadPlan !== '') ? (int) $opCantidadPlan : null,
+                                'folio' => null,
+                                'cantidadPlan' => ($opCantidadPlan !== null && $opCantidadPlan !== '') ? (int) $opCantidadPlan : null,
                                 'fechaInicioPlan' => null,
-                                'fechaFinPlan'    => ($opFechaFinPlan !== null && $opFechaFinPlan !== '') ? $opFechaFinPlan : null,
-                                'status'          => 'Planeada',
+                                'fechaFinPlan' => ($opFechaFinPlan !== null && $opFechaFinPlan !== '') ? $opFechaFinPlan : null,
+                                'status' => 'Planeada',
                             ];
                             $db->table('orden_produccion')->insert($newOp);
                             $rowsOP = $db->affectedRows();
@@ -1524,9 +1820,10 @@ public function m11_eliminar_usuario()
                                 if ($dvId && $cant) {
                                     $precio = null;
                                     try {
-                                        $rowP  = $db->query('SELECT d.precio_unidad FROM diseno_version dv LEFT JOIN diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int) $dvId])->getRowArray();
+                                        $rowP = $db->query('SELECT d.precio_unidad FROM diseno_version dv LEFT JOIN diseno d ON d.id = dv.disenoId WHERE dv.id = ?', [(int) $dvId])->getRowArray();
                                         $precio = $rowP['precio_unidad'] ?? null;
-                                    } catch (\Throwable $eP1) {}
+                                    } catch (\Throwable $eP1) {
+                                    }
                                     if ($precio !== null) {
                                         $calcTotal = (float) $precio * (float) $cant;
                                         $db->table('orden_compra')->where('id', (int) $id)->update(['total' => $calcTotal]);
@@ -1534,11 +1831,12 @@ public function m11_eliminar_usuario()
                                     }
                                 }
                             }
-                        } catch (\Throwable $eR) {}
+                        } catch (\Throwable $eR) {
+                        }
 
                         // ===== Detalle por tallas =====
                         $tallasRaw = $this->request->getPost('tallas');
-                        $tallas    = null;
+                        $tallas = null;
 
                         if (is_array($tallasRaw) && !empty($tallasRaw)) {
                             $tallas = $tallasRaw;
@@ -1555,14 +1853,16 @@ public function m11_eliminar_usuario()
                         if (is_array($tallas) && !empty($tallas)) {
                             $rowsValid = [];
                             foreach ($tallas as $t) {
-                                if (!is_array($t)) { continue; }
-                                $idSexo  = $t['id_sexo']  ?? $t['sexo_id']  ?? null;
+                                if (!is_array($t)) {
+                                    continue;
+                                }
+                                $idSexo = $t['id_sexo'] ?? $t['sexo_id'] ?? null;
                                 $idTalla = $t['id_talla'] ?? $t['talla_id'] ?? null;
-                                $cant    = $t['cantidad'] ?? $t['cant']     ?? null;
+                                $cant = $t['cantidad'] ?? $t['cant'] ?? null;
                                 $cantInt = (int) $cant;
                                 if ($idSexo !== null && $idTalla !== null && $cantInt > 0) {
                                     $rowsValid[] = [
-                                        'id_sexo'  => (int) $idSexo,
+                                        'id_sexo' => (int) $idSexo,
                                         'id_talla' => (int) $idTalla,
                                         'cantidad' => $cantInt,
                                     ];
@@ -1580,22 +1880,24 @@ public function m11_eliminar_usuario()
                                     } catch (\Throwable $e) {
                                         try {
                                             $db->table('OrdenProduccionTalla')->where('ordenProduccionId', $opId)->delete();
-                                        } catch (\Throwable $e2) {}
+                                        } catch (\Throwable $e2) {
+                                        }
                                     }
 
                                     foreach ($rowsValid as $rv) {
                                         $rowTalla = [
                                             'ordenProduccionId' => $opId,
-                                            'id_sexo'           => $rv['id_sexo'],
-                                            'id_talla'          => $rv['id_talla'],
-                                            'cantidad'          => $rv['cantidad'],
+                                            'id_sexo' => $rv['id_sexo'],
+                                            'id_talla' => $rv['id_talla'],
+                                            'cantidad' => $rv['cantidad'],
                                         ];
                                         try {
                                             $db->table('pedido_tallas_detalle')->insert($rowTalla);
                                         } catch (\Throwable $eT1) {
                                             try {
                                                 $db->table('OrdenProduccionTalla')->insert($rowTalla);
-                                            } catch (\Throwable $eT2) {}
+                                            } catch (\Throwable $eT2) {
+                                            }
                                         }
                                     }
                                 }
@@ -1605,16 +1907,16 @@ public function m11_eliminar_usuario()
                 }
 
                 if ($this->request->isAJAX() || $acceptsJson) {
-                    $db    = \Config\Database::connect();
+                    $db = \Config\Database::connect();
                     $ocRow = $db->query('SELECT id, folio, fecha, estatus, moneda, total FROM orden_compra WHERE id = ?', [(int) $id])->getRowArray();
                     $opRow = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
                     return $this->response->setJSON([
                         'success' => true,
                         'message' => 'Pedido actualizado correctamente',
-                        'rowsOC'  => $rowsOC,
-                        'rowsOP'  => $rowsOP,
-                        'oc'      => $ocRow,
-                        'op'      => $opRow,
+                        'rowsOC' => $rowsOC,
+                        'rowsOP' => $rowsOP,
+                        'oc' => $ocRow,
+                        'op' => $opRow,
                     ]);
                 }
 
@@ -1644,15 +1946,15 @@ public function m11_eliminar_usuario()
         // Cargar catálogos de tallas y sexos
         $db = \Config\Database::connect();
         $catalogoTallas = $db->table('tallas')->get()->getResultArray();
-        $catalogoSexos  = $db->table('sexo')->get()->getResultArray();
+        $catalogoSexos = $db->table('sexo')->get()->getResultArray();
 
         return view('modulos/editarpedido', $this->payload([
-            'title'          => 'Módulo 1 · Editar Pedido',
-            'pedido'         => $pedido,
-            'id'             => $id,
-            'notifCount'     => 0,
+            'title' => 'Módulo 1 · Editar Pedido',
+            'pedido' => $pedido,
+            'id' => $id,
+            'notifCount' => 0,
             'catalogoTallas' => $catalogoTallas,
-            'catalogoSexos'  => $catalogoSexos,
+            'catalogoSexos' => $catalogoSexos,
         ]));
     }
 
@@ -1660,10 +1962,10 @@ public function m11_eliminar_usuario()
     public function m1_detalles($id = null)
     {
         $pedidoModel = new \App\Models\PedidoModel();
-        
+
         // Traer detalle completo para incluir cliente, direcciones, y diseño asignado
         $pedido = $pedidoModel->getPedidoDetalle((int) $id);
-        
+
         // Para depuración: registrar datos del pedido
         log_message('debug', 'Datos del pedido: ' . print_r([
             'id' => $id,
@@ -1678,12 +1980,12 @@ public function m11_eliminar_usuario()
             if (!empty($tallas)) {
                 $pedido['tallas_detalle'] = $tallas;
             }
-            
+
             // Si no hay tallas en tallas_detalle pero sí en el array de tallas
             if (empty($pedido['tallas_detalle']) && !empty($pedido['tallas'])) {
                 $pedido['tallas_detalle'] = $pedido['tallas'];
             }
-            
+
             // Para depuración
             log_message('debug', 'Tallas cargadas: ' . print_r($pedido['tallas_detalle'], true));
         }
@@ -2370,13 +2672,13 @@ public function m11_eliminar_usuario()
                 $msg = $err['message'] ?? 'No se pudo actualizar';
                 throw new \Exception($msg);
             }
-            
+
             // Crear notificación para el rol actualizado
             try {
                 $notificationService = new NotificationService();
                 $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
                 $descripcionCorta = strlen($desc) > 100 ? substr($desc, 0, 100) . '...' : $desc;
-                
+
                 $notificationService->notifyRolActualizado(
                     $maquiladoraId,
                     $nom,
@@ -2386,7 +2688,7 @@ public function m11_eliminar_usuario()
                 // No fallar la actualización del rol si hay error en la notificación
                 log_message('warning', 'Error al crear notificación de rol actualizado: ' . $e->getMessage());
             }
-            
+
             return $this->response->setJSON(['success' => true, 'message' => 'Rol actualizado correctamente']);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([
@@ -2465,133 +2767,133 @@ public function m11_eliminar_usuario()
      * Respuesta: JSON { success, message? }
      */
     /**
- * Guardar los permisos de un rol (POST): rol_id, permisos[]
- * Respuesta: JSON { success, message? }
- */
-public function m11_roles_guardar_permisos()
-{
-    if (!can('menu.roles')) {
-        return $this->response->setStatusCode(403)->setJSON([
-            'success' => false,
-            'message' => 'Acceso denegado',
-        ]);
-    }
+     * Guardar los permisos de un rol (POST): rol_id, permisos[]
+     * Respuesta: JSON { success, message? }
+     */
+    public function m11_roles_guardar_permisos()
+    {
+        if (!can('menu.roles')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
 
-    $rolId = (int) ($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
-    $permisos = $this->request->getPost('permisos') ?? [];
-    $notificaciones = $this->request->getPost('notificaciones') ?? [];
+        $rolId = (int) ($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
+        $permisos = $this->request->getPost('permisos') ?? [];
+        $notificaciones = $this->request->getPost('notificaciones') ?? [];
 
-    log_message('debug', 'Guardando permisos - rol_id: ' . $rolId . ', permisos: ' . json_encode($permisos));
-    log_message('debug', 'Guardando notificaciones - rol_id: ' . $rolId . ', notificaciones: ' . json_encode($notificaciones));
+        log_message('debug', 'Guardando permisos - rol_id: ' . $rolId . ', permisos: ' . json_encode($permisos));
+        log_message('debug', 'Guardando notificaciones - rol_id: ' . $rolId . ', notificaciones: ' . json_encode($notificaciones));
 
-    if ($rolId <= 0) {
-        return $this->response->setStatusCode(400)->setJSON([
-            'success' => false,
-            'message' => 'ID de rol inválido: ' . $rolId
-        ]);
-    }
+        if ($rolId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'message' => 'ID de rol inválido: ' . $rolId
+            ]);
+        }
 
-    $db = \Config\Database::connect();
+        $db = \Config\Database::connect();
 
-    try {
-        $db->transStart();
-
-        // Verificar y crear tabla rol_notificacion si no existe
-        $this->crearTablaRolNotificacionSiNoExiste($db);
-
-        // Eliminar permisos actuales de ese rol
-        $db->table('rol_permiso')->where('rol_id', $rolId)->delete();
-
-        // Obtener maquiladoraID del rol para rellenar rol_permiso.maquiladoraID
-        $maquiladoraId = null;
         try {
-            $rolRow = $db->table('rol')->select('maquiladoraID')->where('id', $rolId)->get()->getRowArray();
-            if ($rolRow && array_key_exists('maquiladoraID', $rolRow)) {
-                $maquiladoraId = $rolRow['maquiladoraID'] !== null ? (int) $rolRow['maquiladoraID'] : null;
-            }
-        } catch (\Throwable $e) {
-            log_message('error', 'Error obteniendo maquiladoraID para rol ' . $rolId . ': ' . $e->getMessage());
-        }
+            $db->transStart();
 
-        // Insertar nuevos permisos
-        if (!empty($permisos)) {
-            $data = [];
-            foreach ($permisos as $permiso) {
-                $row = [
-                    'rol_id'  => $rolId,
-                    'permiso' => trim($permiso),
-                ];
-                if ($maquiladoraId !== null) {
-                    $row['maquiladoraID'] = $maquiladoraId;
+            // Verificar y crear tabla rol_notificacion si no existe
+            $this->crearTablaRolNotificacionSiNoExiste($db);
+
+            // Eliminar permisos actuales de ese rol
+            $db->table('rol_permiso')->where('rol_id', $rolId)->delete();
+
+            // Obtener maquiladoraID del rol para rellenar rol_permiso.maquiladoraID
+            $maquiladoraId = null;
+            try {
+                $rolRow = $db->table('rol')->select('maquiladoraID')->where('id', $rolId)->get()->getRowArray();
+                if ($rolRow && array_key_exists('maquiladoraID', $rolRow)) {
+                    $maquiladoraId = $rolRow['maquiladoraID'] !== null ? (int) $rolRow['maquiladoraID'] : null;
                 }
-                $data[] = $row;
+            } catch (\Throwable $e) {
+                log_message('error', 'Error obteniendo maquiladoraID para rol ' . $rolId . ': ' . $e->getMessage());
             }
-            log_message('debug', 'Datos a insertar en rol_permiso: ' . json_encode($data));
-            $db->table('rol_permiso')->insertBatch($data);
-        }
 
-        // Eliminar notificaciones actuales de ese rol
-        if ($db->tableExists('rol_notificacion')) {
-            $db->table('rol_notificacion')->where('rol_id', $rolId)->delete();
-            
-            // Insertar nuevas notificaciones
-            if (!empty($notificaciones)) {
-                $notifData = [];
-                foreach ($notificaciones as $notif) {
+            // Insertar nuevos permisos
+            if (!empty($permisos)) {
+                $data = [];
+                foreach ($permisos as $permiso) {
                     $row = [
                         'rol_id' => $rolId,
-                        'tipo_notificacion' => trim($notif),
+                        'permiso' => trim($permiso),
                     ];
                     if ($maquiladoraId !== null) {
                         $row['maquiladoraID'] = $maquiladoraId;
                     }
-                    $notifData[] = $row;
+                    $data[] = $row;
                 }
-                log_message('debug', 'Datos a insertar en rol_notificacion: ' . json_encode($notifData));
-                $db->table('rol_notificacion')->insertBatch($notifData);
+                log_message('debug', 'Datos a insertar en rol_permiso: ' . json_encode($data));
+                $db->table('rol_permiso')->insertBatch($data);
             }
-        }
 
-        $db->transComplete();
+            // Eliminar notificaciones actuales de ese rol
+            if ($db->tableExists('rol_notificacion')) {
+                $db->table('rol_notificacion')->where('rol_id', $rolId)->delete();
 
-        if ($db->transStatus() === false) {
-            $error = $db->error();
-            throw new \Exception('Error en la transacción: ' . ($error['message'] ?? 'Error desconocido'));
-        }
+                // Insertar nuevas notificaciones
+                if (!empty($notificaciones)) {
+                    $notifData = [];
+                    foreach ($notificaciones as $notif) {
+                        $row = [
+                            'rol_id' => $rolId,
+                            'tipo_notificacion' => trim($notif),
+                        ];
+                        if ($maquiladoraId !== null) {
+                            $row['maquiladoraID'] = $maquiladoraId;
+                        }
+                        $notifData[] = $row;
+                    }
+                    log_message('debug', 'Datos a insertar en rol_notificacion: ' . json_encode($notifData));
+                    $db->table('rol_notificacion')->insertBatch($notifData);
+                }
+            }
 
-        log_message('debug', 'Permisos guardados exitosamente para rol_id: ' . $rolId);
+            $db->transComplete();
 
-        // Crear notificación para los permisos actualizados
-        try {
-            $notificationService = new NotificationService();
-            $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
-            
-            // Obtener el nombre del rol
-            $rolData = $db->table('rol')->select('nombre')->where('id', $rolId)->get()->getRowArray();
-            $nombreRol = $rolData['nombre'] ?? 'Rol #' . $rolId;
-            
-            $notificationService->notifyPermisosRolActualizados(
-                $maquiladoraId,
-                $nombreRol,
-                count($permisos)
-            );
+            if ($db->transStatus() === false) {
+                $error = $db->error();
+                throw new \Exception('Error en la transacción: ' . ($error['message'] ?? 'Error desconocido'));
+            }
+
+            log_message('debug', 'Permisos guardados exitosamente para rol_id: ' . $rolId);
+
+            // Crear notificación para los permisos actualizados
+            try {
+                $notificationService = new NotificationService();
+                $maquiladoraId = session()->get('maquiladoraID') ?? session()->get('maquiladora_id') ?? 1;
+
+                // Obtener el nombre del rol
+                $rolData = $db->table('rol')->select('nombre')->where('id', $rolId)->get()->getRowArray();
+                $nombreRol = $rolData['nombre'] ?? 'Rol #' . $rolId;
+
+                $notificationService->notifyPermisosRolActualizados(
+                    $maquiladoraId,
+                    $nombreRol,
+                    count($permisos)
+                );
+            } catch (\Throwable $e) {
+                // No fallar el guardado de permisos si hay error en la notificación
+                log_message('warning', 'Error al crear notificación de permisos actualizados: ' . $e->getMessage());
+            }
+
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Permisos guardados correctamente',
+            ]);
         } catch (\Throwable $e) {
-            // No fallar el guardado de permisos si hay error en la notificación
-            log_message('warning', 'Error al crear notificación de permisos actualizados: ' . $e->getMessage());
+            log_message('error', 'Error al guardar permisos para rol_id ' . $rolId . ': ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al guardar permisos: ' . $e->getMessage(),
+            ]);
         }
-
-        return $this->response->setJSON([
-            'success' => true,
-            'message' => 'Permisos guardados correctamente',
-        ]);
-    } catch (\Throwable $e) {
-        log_message('error', 'Error al guardar permisos para rol_id ' . $rolId . ': ' . $e->getMessage());
-        return $this->response->setStatusCode(500)->setJSON([
-            'success' => false,
-            'message' => 'Error al guardar permisos: ' . $e->getMessage(),
-        ]);
     }
-}
 
     /**
      * Eliminar un rol (POST): id
@@ -2669,7 +2971,7 @@ public function m11_roles_guardar_permisos()
 
         try {
             $db = \Config\Database::connect();
-            
+
             // Verificar y crear tabla rol_notificacion si no existe
             $this->crearTablaRolNotificacionSiNoExiste($db);
 
@@ -2709,11 +3011,11 @@ public function m11_roles_guardar_permisos()
 
         try {
             $db = \Config\Database::connect();
-            
+
             // Limpiar todas las notificaciones
             $db->table('notificaciones')->emptyTable();
             $db->table('usuarioNotificacion')->emptyTable();
-            
+
             log_message('info', 'Todas las notificaciones han sido limpiadas manualmente');
 
             return $this->response->setJSON([
@@ -3212,22 +3514,22 @@ public function m11_roles_guardar_permisos()
         // Obtener maquiladoraId desde la sesión
         $maquiladoraId = session()->get('maquiladora_id');
 
-        $clienteId        = (int) ($this->request->getPost('oc_clienteId'));
-        $ocEstatus        = (string) ($this->request->getPost('oc_estatus') ?? 'Pendiente');
-        $ocFolio          = trim((string) $this->request->getPost('oc_folio'));
-        $ocFecha          = (string) $this->request->getPost('oc_fecha');
-        $ocMoneda         = trim((string) $this->request->getPost('oc_moneda')) ?: 'MXN';
-        $ocTotal          = (float) ($this->request->getPost('oc_total'));
+        $clienteId = (int) ($this->request->getPost('oc_clienteId'));
+        $ocEstatus = (string) ($this->request->getPost('oc_estatus') ?? 'Pendiente');
+        $ocFolio = trim((string) $this->request->getPost('oc_folio'));
+        $ocFecha = (string) $this->request->getPost('oc_fecha');
+        $ocMoneda = trim((string) $this->request->getPost('oc_moneda')) ?: 'MXN';
+        $ocTotal = (float) ($this->request->getPost('oc_total'));
 
-        $opFolio          = trim((string) $this->request->getPost('op_folio'));
-        $opCantidadPlan   = (int) ($this->request->getPost('op_cantidadPlan'));
-        $opFechaInicioPlan= (string) ($this->request->getPost('op_fechaInicioPlan'));
-        $opFechaFinPlan   = (string) ($this->request->getPost('op_fechaFinPlan'));
-        $opStatus         = (string) ($this->request->getPost('op_status') ?? 'Planeada');
+        $opFolio = trim((string) $this->request->getPost('op_folio'));
+        $opCantidadPlan = (int) ($this->request->getPost('op_cantidadPlan'));
+        $opFechaInicioPlan = (string) ($this->request->getPost('op_fechaInicioPlan'));
+        $opFechaFinPlan = (string) ($this->request->getPost('op_fechaFinPlan'));
+        $opStatus = (string) ($this->request->getPost('op_status') ?? 'Planeada');
 
         // Diseño
         $disenoVersionId = (int) ($this->request->getPost('disenoVersionId') ?? $this->request->getPost('pa_dis_version_id') ?? 0);
-        $disenoId        = (int) ($this->request->getPost('disenoId') ?? 0);
+        $disenoId = (int) ($this->request->getPost('disenoId') ?? 0);
 
         if ($clienteId <= 0) {
             return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'message' => 'Cliente requerido']);
@@ -3278,11 +3580,11 @@ public function m11_roles_guardar_permisos()
             // Insertar orden_compra (nombres exactos)
             $rowOC = [
                 'clienteId' => $clienteId,
-                'folio'     => $ocFolio !== '' ? $ocFolio : ('OC-' . date('Y') . '-' . $clienteId),
-                'fecha'     => $ocFecha,
-                'estatus'   => $ocEstatus ?: 'Pendiente',
-                'moneda'    => $ocMoneda,
-                'total'     => $ocTotal,
+                'folio' => $ocFolio !== '' ? $ocFolio : ('OC-' . date('Y') . '-' . $clienteId),
+                'fecha' => $ocFecha,
+                'estatus' => $ocEstatus ?: 'Pendiente',
+                'moneda' => $ocMoneda,
+                'total' => $ocTotal,
             ];
             if ($maquiladoraId) {
                 $rowOC['maquiladoraID'] = (int) $maquiladoraId;
@@ -3316,13 +3618,13 @@ public function m11_roles_guardar_permisos()
 
             // Insertar orden_produccion (nombres exactos)
             $rowOP = [
-                'ordenCompraId'    => $ocId,
-                'disenoVersionId'  => $disenoVersionId,
-                'folio'            => $opFolio !== '' ? $opFolio : ('OP-' . date('Y') . '-' . $clienteId),
-                'cantidadPlan'     => $opCantidadPlan,
-                'fechaInicioPlan'  => $opFechaInicioPlan,
-                'fechaFinPlan'     => ($opFechaFinPlan ?: null),
-                'status'           => $opStatus ?: 'Planeada',
+                'ordenCompraId' => $ocId,
+                'disenoVersionId' => $disenoVersionId,
+                'folio' => $opFolio !== '' ? $opFolio : ('OP-' . date('Y') . '-' . $clienteId),
+                'cantidadPlan' => $opCantidadPlan,
+                'fechaInicioPlan' => $opFechaInicioPlan,
+                'fechaFinPlan' => ($opFechaFinPlan ?: null),
+                'status' => $opStatus ?: 'Planeada',
             ];
             if ($maquiladoraId) {
                 $rowOP['maquiladoraID'] = (int) $maquiladoraId;
@@ -3361,9 +3663,9 @@ public function m11_roles_guardar_permisos()
                     if (isset($t['id_sexo'], $t['id_talla'], $t['cantidad']) && $t['cantidad'] > 0) {
                         $rowTalla = [
                             'ordenProduccionId' => $opId,
-                            'id_sexo'           => (int) $t['id_sexo'],
-                            'id_talla'          => (int) $t['id_talla'],
-                            'cantidad'          => (int) $t['cantidad'],
+                            'id_sexo' => (int) $t['id_sexo'],
+                            'id_talla' => (int) $t['id_talla'],
+                            'cantidad' => (int) $t['cantidad'],
                         ];
                         try {
                             $db->table('pedido_tallas_detalle')->insert($rowTalla);
@@ -3381,10 +3683,10 @@ public function m11_roles_guardar_permisos()
             $rowIns = [
                 'ordenProduccionId' => $opId,
                 'puntoInspeccionId' => null,
-                'inspectorId'       => null,
-                'fecha'             => null,
-                'resultado'         => null,
-                'observaciones'     => null,
+                'inspectorId' => null,
+                'fecha' => null,
+                'resultado' => null,
+                'observaciones' => null,
             ];
             $db->table('inspeccion')->insert($rowIns);
             $insId = (int) $db->insertID();
@@ -3400,9 +3702,9 @@ public function m11_roles_guardar_permisos()
             // Crear registro inicial en reproceso vinculado a la inspeccion (otros campos en NULL)
             $rowRep = [
                 'inspeccionId' => $insId,
-                'accion'       => null,
-                'cantidad'     => null,
-                'fecha'        => null,
+                'accion' => null,
+                'cantidad' => null,
+                'fecha' => null,
             ];
             $db->table('reproceso')->insert($rowRep);
 
@@ -3414,26 +3716,26 @@ public function m11_roles_guardar_permisos()
             // Enviar notificación de pedido creado
             try {
                 $notificationService = new \App\Services\NotificationService();
-                
+
                 // Obtener nombre del cliente para la notificación
                 $cliente = $db->table('cliente')->where('id', $clienteId)->get()->getRowArray();
                 $clienteNombre = $cliente['nombre'] ?? 'Cliente desconocido';
-                
+
                 $notificationId = $notificationService->notifyPedidoAgregado(
                     $maquiladoraId ?? 1,
                     $opFolio ?: $opId,
                     $clienteNombre
                 );
-                
+
                 log_message('debug', 'Notificación de pedido creada con ID: ' . ($notificationId ?? 'FALSE'));
             } catch (\Exception $e) {
                 log_message('error', 'Error al enviar notificación de pedido: ' . $e->getMessage());
             }
 
             return $this->response->setJSON([
-                'ok'      => true,
-                'ocId'    => $ocId,
-                'opId'    => $opId,
+                'ok' => true,
+                'ocId' => $ocId,
+                'opId' => $opId,
                 'message' => 'Pedido creado',
             ]);
         } catch (\Throwable $e) {
@@ -3444,7 +3746,7 @@ public function m11_roles_guardar_permisos()
             }
 
             return $this->response->setStatusCode(500)->setJSON([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'Error al crear pedido: ' . $e->getMessage(),
             ]);
         }
@@ -3455,14 +3757,14 @@ public function m11_roles_guardar_permisos()
         $method = strtolower($this->request->getMethod());
         if ($method !== 'post') {
             return $this->response->setStatusCode(405)->setJSON([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'Método no permitido',
             ]);
         }
 
         if (!$this->request->isAJAX()) {
             return $this->response->setStatusCode(400)->setJSON([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'Solicitud inválida',
             ]);
         }
@@ -3470,14 +3772,14 @@ public function m11_roles_guardar_permisos()
         $file = $this->request->getFile('pdf');
         if (!$file || !$file->isValid()) {
             return $this->response->setStatusCode(400)->setJSON([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'Archivo PDF no recibido o inválido',
             ]);
         }
 
         if (strtolower($file->getClientExtension()) !== 'pdf') {
             return $this->response->setStatusCode(400)->setJSON([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'El archivo debe ser un PDF',
             ]);
         }
@@ -3487,13 +3789,13 @@ public function m11_roles_guardar_permisos()
             @mkdir($targetDir, 0775, true);
         }
 
-        $newName  = uniqid('pedido_', true) . '.pdf';
+        $newName = uniqid('pedido_', true) . '.pdf';
         $filePath = rtrim($targetDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $newName;
         try {
             $file->move($targetDir, $newName, true);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'No se pudo guardar el PDF: ' . $e->getMessage(),
             ]);
         }
@@ -3536,31 +3838,31 @@ public function m11_roles_guardar_permisos()
 
         if (!class_exists(\Smalot\PdfParser\Parser::class)) {
             return $this->response->setStatusCode(500)->setJSON([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'No está instalado el parser de PDF (smalot/pdfparser).',
             ]);
         }
 
         try {
             $parser = new \Smalot\PdfParser\Parser();
-            $pdf    = $parser->parseFile($filePath);
-            $text   = (string) $pdf->getText();
+            $pdf = $parser->parseFile($filePath);
+            $text = (string) $pdf->getText();
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'Error al leer el PDF: ' . $e->getMessage(),
             ]);
         }
 
-        $clienteNombre     = null;
-        $modelo            = null;
-        $modeloCliente     = null;
-        $fecha             = null;
-        $disenoNombre      = null;
+        $clienteNombre = null;
+        $modelo = null;
+        $modeloCliente = null;
+        $fecha = null;
+        $disenoNombre = null;
         $disenoDescripcion = null;
-        $disenoNotas       = null;
-        $tallasTexto       = null;
-        $cantidadPlan      = null;
+        $disenoNotas = null;
+        $tallasTexto = null;
+        $cantidadPlan = null;
 
         if ($text !== '') {
             // CLIENTE: solo por etiqueta explícita al inicio de línea
@@ -3587,12 +3889,12 @@ public function m11_roles_guardar_permisos()
             // FECHA: primer dd/mm/yyyy que aparezca
             if (preg_match('/([0-9]{1,2}\/[0-9]{1,2}\/[0-9]{2,4})/u', $text, $m)) {
                 $fechaRaw = trim($m[1]);
-                $parts    = preg_split('/[\/]/', $fechaRaw);
+                $parts = preg_split('/[\/]/', $fechaRaw);
 
                 if (count($parts) === 3) {
-                    $d  = (int) $parts[0];
+                    $d = (int) $parts[0];
                     $m2 = (int) $parts[1];
-                    $y  = (int) $parts[2];
+                    $y = (int) $parts[2];
                     if ($y < 100) {
                         $y += 2000;
                     }
@@ -3623,7 +3925,9 @@ public function m11_roles_guardar_permisos()
             if (preg_match_all('/ETIQUETA[^\n]*/iu', $text, $matches) && !empty($matches[0])) {
                 foreach ($matches[0] as $ln) {
                     $ln = trim($ln);
-                    if ($ln !== '') { $notas[] = $ln; }
+                    if ($ln !== '') {
+                        $notas[] = $ln;
+                    }
                 }
             }
             if (!empty($notas)) {
@@ -3642,18 +3946,18 @@ public function m11_roles_guardar_permisos()
         }
 
         return $this->response->setJSON([
-            'ok'                  => true,
-            'cliente_nombre'      => $clienteNombre,
-            'modelo'              => $modelo,
-            'modelo_cliente'      => $modeloCliente,
-            'fecha'               => $fecha,
-            'texto_crudo'         => $text,
-            'diseno_nombre'       => $disenoNombre,
-            'diseno_descripcion'  => $disenoDescripcion,
-            'diseno_notas'        => $disenoNotas,
-            'tallas_texto'        => $tallasTexto,
-            'cantidad_plan'       => $cantidadPlan,
-            'paginas_img'         => $paginasImg,
+            'ok' => true,
+            'cliente_nombre' => $clienteNombre,
+            'modelo' => $modelo,
+            'modelo_cliente' => $modeloCliente,
+            'fecha' => $fecha,
+            'texto_crudo' => $text,
+            'diseno_nombre' => $disenoNombre,
+            'diseno_descripcion' => $disenoDescripcion,
+            'diseno_notas' => $disenoNotas,
+            'tallas_texto' => $tallasTexto,
+            'cantidad_plan' => $cantidadPlan,
+            'paginas_img' => $paginasImg,
         ]);
     }
 
@@ -3689,10 +3993,10 @@ public function m11_roles_guardar_permisos()
     {
         $maquiladoraId = session()->get('maquiladora_id');
         $rolNotificacionModel = new RolNotificacionModel();
-        
+
         $roles = $rolNotificacionModel->getRolesWithPermisos($maquiladoraId);
         $tiposNotificacion = $rolNotificacionModel->getTiposNotificacion();
-        
+
         return view('modulos/gestion_notificaciones_rol', [
             'roles' => $roles,
             'tiposNotificacion' => $tiposNotificacion,
@@ -3709,23 +4013,23 @@ public function m11_roles_guardar_permisos()
         if ($method === 'options') {
             return $this->response->setJSON(['ok' => true]);
         }
-        
+
         if ($method !== 'post') {
             return $this->response->setStatusCode(405)->setJSON(['error' => 'Método no permitido']);
         }
-        
+
         $rolId = (int) $this->request->getPost('rol_id');
         $tiposNotificacion = $this->request->getPost('tipos_notificacion') ?? [];
         $maquiladoraId = session()->get('maquiladora_id');
-        
+
         if ($rolId <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'ID de rol inválido']);
         }
-        
+
         try {
             $rolNotificacionModel = new RolNotificacionModel();
             $result = $rolNotificacionModel->savePermisosRol($rolId, $maquiladoraId, $tiposNotificacion);
-            
+
             if ($result) {
                 return $this->response->setJSON([
                     'success' => true,
