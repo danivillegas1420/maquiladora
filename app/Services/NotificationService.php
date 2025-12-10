@@ -133,11 +133,8 @@ class NotificationService
         log_message('debug', "NOTIFICATION DEBUG - Configuraciones encontradas para '{$tipoNotificacion}': {$configCount}");
         
         if ($configCount == 0) {
-            log_message('warning', "NOTIFICATION DEBUG - No hay roles configurados para '{$tipoNotificacion}', enviando a todos");
-            return $db->table('users')
-                ->where('maquiladoraIdFK', $maquiladoraId)
-                ->get()
-                ->getResultArray();
+            log_message('warning', "NOTIFICATION DEBUG - No hay roles configurados para '{$tipoNotificacion}', no enviando notificación");
+            return []; // Devolver array vacío en lugar de enviar a todos
         }
 
         // Obtener usuarios cuyos roles tienen permiso para este tipo de notificación

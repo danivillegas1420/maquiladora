@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Services\NotificationService;
+use App\Models\RolNotificacionModel;
 
 /** Controlador principal: vistas y endpoints JSON de módulos. */
 class Modulos extends BaseController
@@ -3678,6 +3679,67 @@ public function m11_roles_guardar_permisos()
             ";
             $db->query($sql);
             log_message('info', 'Tabla rol_notificacion creada exitosamente');
+        }
+    }
+
+    /**
+     * Vista para gestionar notificaciones por rol
+     */
+    public function gestion_notificaciones_rol()
+    {
+        $maquiladoraId = session()->get('maquiladora_id');
+        $rolNotificacionModel = new RolNotificacionModel();
+        
+        $roles = $rolNotificacionModel->getRolesWithPermisos($maquiladoraId);
+        $tiposNotificacion = $rolNotificacionModel->getTiposNotificacion();
+        
+        return view('modulos/gestion_notificaciones_rol', [
+            'roles' => $roles,
+            'tiposNotificacion' => $tiposNotificacion,
+            'maquiladoraId' => $maquiladoraId
+        ]);
+    }
+
+    /**
+     * Guardar configuración de notificaciones para un rol
+     */
+    public function guardar_notificaciones_rol()
+    {
+        $method = strtolower($this->request->getMethod());
+        if ($method === 'options') {
+            return $this->response->setJSON(['ok' => true]);
+        }
+        
+        if ($method !== 'post') {
+            return $this->response->setStatusCode(405)->setJSON(['error' => 'Método no permitido']);
+        }
+        
+        $rolId = (int) $this->request->getPost('rol_id');
+        $tiposNotificacion = $this->request->getPost('tipos_notificacion') ?? [];
+        $maquiladoraId = session()->get('maquiladora_id');
+        
+        if ($rolId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'ID de rol inválido']);
+        }
+        
+        try {
+            $rolNotificacionModel = new RolNotificacionModel();
+            $result = $rolNotificacionModel->savePermisosRol($rolId, $maquiladoraId, $tiposNotificacion);
+            
+            if ($result) {
+                return $this->response->setJSON([
+                    'success' => true,
+                    'message' => 'Configuración de notificaciones actualizada correctamente'
+                ]);
+            } else {
+                return $this->response->setStatusCode(500)->setJSON([
+                    'error' => 'Error al guardar la configuración'
+                ]);
+            }
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Error: ' . $e->getMessage()
+            ]);
         }
     }
 }
