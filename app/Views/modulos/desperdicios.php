@@ -4,12 +4,27 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <style>
-    .table td, .table th{ padding:.85rem .8rem; }
-    .table.tbl-head thead th{
-        background:#e6f0fb;color:#0b1720;font-weight:700;vertical-align:middle;border-color:#cfddec;position:relative;
+    .table td,
+    .table th {
+        padding: .85rem .8rem;
     }
-    .table.tbl-head thead th:not(:last-child){ box-shadow: inset -1px 0 0 #cfddec; }
-    .table.tbl-head tbody td{ background:#f9fbfe; }
+
+    .table.tbl-head thead th {
+        background: #e6f0fb;
+        color: #0b1720;
+        font-weight: 700;
+        vertical-align: middle;
+        border-color: #cfddec;
+        position: relative;
+    }
+
+    .table.tbl-head thead th:not(:last-child) {
+        box-shadow: inset -1px 0 0 #cfddec;
+    }
+
+    .table.tbl-head tbody td {
+        background: #f9fbfe;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -30,10 +45,10 @@
     </div>
 </div>
 
-<?php if(session()->getFlashdata('success')): ?>
+<?php if (session()->getFlashdata('success')): ?>
     <div class="alert alert-success"><?= esc(session()->getFlashdata('success')) ?></div>
 <?php endif; ?>
-<?php if(session()->getFlashdata('error')): ?>
+<?php if (session()->getFlashdata('error')): ?>
     <div class="alert alert-danger"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
 
@@ -47,46 +62,48 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table id="tablaDesechos" class="table table-striped table-bordered align-middle text-center mb-0 tbl-head">
+                    <table id="tablaDesechos"
+                        class="table table-striped table-bordered align-middle text-center mb-0 tbl-head">
                         <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>OP</th>
-                            <th>Cantidad</th>
-                            <th>Motivo</th>
-                            <th>Acciones</th>
-                        </tr>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>OP</th>
+                                <th>Cantidad</th>
+                                <th>Motivo</th>
+                                <th>Acciones</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        <?php if(!empty($desp)): foreach($desp as $x): ?>
-                            <tr data-row-id="<?= (int)$x['id'] ?>">
-                                <td><?= esc($x['fecha']) ?></td>
-                                <td><?= esc($x['op']) ?></td>
-                                <td><?= esc($x['cantidad']) ?></td>
-                                <td><?= esc($x['observaciones']) ?></td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-info ver-desecho"
-                                                data-id="<?= (int)$x['id'] ?>"
-                                                data-bs-toggle="modal" data-bs-target="#modalVistaDesecho"
-                                                title="Ver"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-outline-primary edit-desecho"
-                                                data-id="<?= (int)$x['id'] ?>"
-                                                data-fecha="<?= esc($x['fecha']) ?>"
-                                                data-op="<?= esc($x['op']) ?>"
-                                                data-cantidad="<?= esc($x['cantidad']) ?>"
-                                                data-motivo="<?= esc($x['observaciones']) ?>"
-                                                data-bs-toggle="modal" data-bs-target="#modalDesecho"
-                                                title="Editar"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-sm btn-outline-danger del-desecho"
-                                                data-id="<?= (int)$x['id'] ?>"
-                                                title="Eliminar"><i class="bi bi-trash"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; else: ?>
-                            <tr><td colspan="5" class="text-muted">Sin datos</td></tr>
-                        <?php endif; ?>
+                            <?php if (!empty($desp)):
+                                foreach ($desp as $x): ?>
+                                    <tr data-row-id="<?= (int) $x['id'] ?>">
+                                        <td><?= esc($x['fecha']) ?></td>
+                                        <td><?= esc($x['op']) ?></td>
+                                        <td><?= esc($x['cantidad']) ?></td>
+                                        <td><?= esc($x['observaciones']) ?></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-info ver-desecho"
+                                                    data-id="<?= (int) $x['id'] ?>" data-bs-toggle="modal"
+                                                    data-bs-target="#modalVistaDesecho" title="Ver"><i
+                                                        class="bi bi-eye"></i></button>
+                                                <button class="btn btn-sm btn-outline-primary edit-desecho"
+                                                    data-id="<?= (int) $x['id'] ?>" data-fecha="<?= esc($x['fecha']) ?>"
+                                                    data-op="<?= esc($x['op']) ?>" data-cantidad="<?= esc($x['cantidad']) ?>"
+                                                    data-motivo="<?= esc($x['observaciones']) ?>" data-bs-toggle="modal"
+                                                    data-bs-target="#modalDesecho" title="Editar"><i
+                                                        class="bi bi-pencil"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger del-desecho"
+                                                    data-id="<?= (int) $x['id'] ?>" title="Eliminar"><i
+                                                        class="bi bi-trash"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; else: ?>
+                                <tr>
+                                    <td colspan="5" class="text-muted">Sin datos</td>
+                                </tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -102,46 +119,49 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table id="tablaReprocesos" class="table table-striped table-bordered align-middle text-center mb-0 tbl-head">
+                    <table id="tablaReprocesos"
+                        class="table table-striped table-bordered align-middle text-center mb-0 tbl-head">
                         <thead>
-                        <tr>
-                            <th>OP</th>
-                            <th>Tarea</th>
-                            <th>Pend.</th>
-                            <th>ETA</th>
-                            <th>Acciones</th>
-                        </tr>
+                            <tr>
+                                <th>OP</th>
+                                <th>Tarea</th>
+                                <th>Pend.</th>
+                                <th>ETA</th>
+                                <th>Acciones</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        <?php if(!empty($rep)): foreach($rep as $r): ?>
-                            <tr data-row-id="<?= (int)$r['id'] ?>">
-                                <td><?= esc($r['op']) ?></td>
-                                <td><?= esc($r['tarea']) ?></td>
-                                <td><?= (int)$r['pendientes'] ?></td>
-                                <td><?= esc($r['eta']) ?></td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-info ver-rep"
-                                                data-id="<?= (int)$r['id'] ?>"
-                                                data-bs-toggle="modal" data-bs-target="#modalVistaReproceso"
-                                                title="Ver"><i class="bi bi-eye"></i></button>
-                                        <button class="btn btn-sm btn-outline-primary edit-rep"
-                                                data-id="<?= (int)$r['id'] ?>"
-                                                data-op="<?= esc($r['op']) ?>"
-                                                data-tarea="<?= esc($r['tarea']) ?>"
-                                                data-pendientes="<?= (int)$r['pendientes'] ?>"
-                                                data-eta="<?= esc($r['eta']) ?>"
-                                                data-bs-toggle="modal" data-bs-target="#modalReproceso"
-                                                title="Editar"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-sm btn-outline-danger del-rep"
-                                                data-id="<?= (int)$r['id'] ?>"
-                                                title="Eliminar"><i class="bi bi-trash"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; else: ?>
-                            <tr><td colspan="5" class="text-muted">Sin datos</td></tr>
-                        <?php endif; ?>
+                            <?php if (!empty($rep)):
+                                foreach ($rep as $r): ?>
+                                    <tr data-row-id="<?= (int) $r['id'] ?>">
+                                        <td><?= esc($r['op']) ?></td>
+                                        <td><?= esc($r['tarea']) ?></td>
+                                        <td><?= (int) $r['pendientes'] ?></td>
+                                        <td><?= esc($r['eta']) ?></td>
+                                        <td>
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-outline-info ver-rep"
+                                                    data-id="<?= (int) $r['id'] ?>" data-bs-toggle="modal"
+                                                    data-bs-target="#modalVistaReproceso" title="Ver"><i
+                                                        class="bi bi-eye"></i></button>
+                                                <button class="btn btn-sm btn-outline-primary edit-rep"
+                                                    data-id="<?= (int) $r['id'] ?>" data-op="<?= esc($r['op']) ?>"
+                                                    data-tarea="<?= esc($r['tarea']) ?>"
+                                                    data-pendientes="<?= (int) $r['pendientes'] ?>"
+                                                    data-eta="<?= esc($r['eta']) ?>" data-bs-toggle="modal"
+                                                    data-bs-target="#modalReproceso" title="Editar"><i
+                                                        class="bi bi-pencil"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger del-rep"
+                                                    data-id="<?= (int) $r['id'] ?>" title="Eliminar"><i
+                                                        class="bi bi-trash"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; else: ?>
+                                <tr>
+                                    <td colspan="5" class="text-muted">Sin datos</td>
+                                </tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -170,12 +190,22 @@
                             <input type="date" class="form-control" name="fecha" id="d-fecha" required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">OP</label>
-                            <input class="form-control" name="op" id="d-op" placeholder="1001" required>
+                            <label class="form-label">Orden de Producción</label>
+                            <select class="form-select" name="op" id="d-op" required>
+                                <option value="">Seleccione una OP...</option>
+                                <?php if (!empty($ordenesProduccion)):
+                                    foreach ($ordenesProduccion as $op): ?>
+                                        <option value="<?= esc($op['folio']) ?>">
+                                            <?= esc($op['folio']) ?>
+                                            <?= !empty($op['cliente_nombre']) ? ' - ' . esc($op['cliente_nombre']) : '' ?>
+                                        </option>
+                                    <?php endforeach; endif; ?>
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Cantidad</label>
-                            <input type="number" step="0.01" class="form-control" name="cantidad" id="d-cantidad" required>
+                            <input type="number" step="0.01" class="form-control" name="cantidad" id="d-cantidad"
+                                required>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Motivo (observaciones)</label>
@@ -196,15 +226,20 @@
 <div class="modal fade" id="modalVistaDesecho" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content text-dark">
-            <div class="modal-header"><h5 class="modal-title">Detalle del desecho</h5>
+            <div class="modal-header">
+                <h5 class="modal-title">Detalle del desecho</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-3">Fecha</dt><dd class="col-sm-9" id="vd-fecha">-</dd>
-                    <dt class="col-sm-3">OP</dt><dd class="col-sm-9" id="vd-op">-</dd>
-                    <dt class="col-sm-3">Cantidad</dt><dd class="col-sm-9" id="vd-cantidad">-</dd>
-                    <dt class="col-sm-3">Motivo</dt><dd class="col-sm-9" id="vd-motivo">-</dd>
+                    <dt class="col-sm-3">Fecha</dt>
+                    <dd class="col-sm-9" id="vd-fecha">-</dd>
+                    <dt class="col-sm-3">OP</dt>
+                    <dd class="col-sm-9" id="vd-op">-</dd>
+                    <dt class="col-sm-3">Cantidad</dt>
+                    <dd class="col-sm-9" id="vd-cantidad">-</dd>
+                    <dt class="col-sm-3">Motivo</dt>
+                    <dd class="col-sm-9" id="vd-motivo">-</dd>
                 </dl>
             </div>
         </div>
@@ -215,7 +250,8 @@
 <div class="modal fade" id="modalReproceso" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content text-dark">
-            <div class="modal-header"><h5 class="modal-title">Reproceso</h5>
+            <div class="modal-header">
+                <h5 class="modal-title">Reproceso</h5>
                 <div class="ms-auto"></div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -223,17 +259,26 @@
                 <?= csrf_field() ?>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label">OP</label>
-                            <input class="form-control" name="op" id="r-op" required>
+                        <div class="col-12">
+                            <label class="form-label">Orden de Producción</label>
+                            <select class="form-select" name="op" id="r-op" required>
+                                <option value="">Seleccione...</option>
+                                <?php if (!empty($ordenesProduccion)):
+                                    foreach ($ordenesProduccion as $op): ?>
+                                        <option value="<?= esc($op['folio']) ?>">
+                                            <?= esc($op['folio']) ?>        <?= !empty($op['cliente_nombre']) ? ' - ' . esc($op['cliente_nombre']) : '' ?>
+                                        </option>
+                                    <?php endforeach; endif; ?>
+                            </select>
                         </div>
-                        <div class="col-md-9">
+                        <div class="col-12">
                             <label class="form-label">Tarea</label>
                             <input class="form-control" name="tarea" id="r-tarea" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Pendientes</label>
-                            <input type="number" min="0" class="form-control" name="pendientes" id="r-pendientes" required>
+                            <input type="number" min="0" class="form-control" name="pendientes" id="r-pendientes"
+                                required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">ETA</label>
@@ -262,15 +307,20 @@
 <div class="modal fade" id="modalVistaReproceso" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content text-dark">
-            <div class="modal-header"><h5 class="modal-title">Detalle del reproceso</h5>
+            <div class="modal-header">
+                <h5 class="modal-title">Detalle del reproceso</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-3">OP</dt><dd class="col-sm-9" id="vr-op">-</dd>
-                    <dt class="col-sm-3">Tarea</dt><dd class="col-sm-9" id="vr-tarea">-</dd>
-                    <dt class="col-sm-3">Pendientes</dt><dd class="col-sm-9" id="vr-pendientes">-</dd>
-                    <dt class="col-sm-3">ETA</dt><dd class="col-sm-9" id="vr-eta">-</dd>
+                    <dt class="col-sm-3">OP</dt>
+                    <dd class="col-sm-9" id="vr-op">-</dd>
+                    <dt class="col-sm-3">Tarea</dt>
+                    <dd class="col-sm-9" id="vr-tarea">-</dd>
+                    <dt class="col-sm-3">Pendientes</dt>
+                    <dd class="col-sm-9" id="vr-pendientes">-</dd>
+                    <dt class="col-sm-3">ETA</dt>
+                    <dd class="col-sm-9" id="vr-eta">-</dd>
                 </dl>
             </div>
         </div>
@@ -299,118 +349,128 @@
 <script>
     $(function () {
         const langES = {
-            sProcessing:"Procesando...", sLengthMenu:"Mostrar _MENU_ registros",
-            sZeroRecords:"No se encontraron resultados", sEmptyTable:"Sin datos",
-            sInfo:"Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty:"Mostrando 0–0 de 0",
-            sInfoFiltered:"(filtrado de _MAX_)", sSearch:"Buscar:",
-            oPaginate:{ sFirst:"Primero", sLast:"Último", sNext:"Siguiente", sPrevious:"Anterior" },
-            buttons:{ copy:"Copiar" }
+            sProcessing: "Procesando...", sLengthMenu: "Mostrar _MENU_ registros",
+            sZeroRecords: "No se encontraron resultados", sEmptyTable: "Sin datos",
+            sInfo: "Mostrando _START_–_END_ de _TOTAL_", sInfoEmpty: "Mostrando 0–0 de 0",
+            sInfoFiltered: "(filtrado de _MAX_)", sSearch: "Buscar:",
+            oPaginate: { sFirst: "Primero", sLast: "Último", sNext: "Siguiente", sPrevious: "Anterior" },
+            buttons: { copy: "Copiar" }
         };
-        const hoy = new Date().toISOString().slice(0,10);
+        const hoy = new Date().toISOString().slice(0, 10);
 
-        const tieneDatosDesechos = $('#tablaDesechos tbody tr').filter(function(){
+        const tieneDatosDesechos = $('#tablaDesechos tbody tr').filter(function () {
             return !$(this).find('td[colspan]').length;
         }).length > 0;
 
         if (tieneDatosDesechos) {
             $('#tablaDesechos').DataTable({
                 language: langES,
-                columnDefs: [{ orderable:false, searchable:false, targets:[4] }],
-                dom:"<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                columnDefs: [{ orderable: false, searchable: false, targets: [4] }],
+                dom: "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
                     "<'row'<'col-12'tr>>" +
                     "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
                 buttons: [
-                    { extend:'copy',  text:'Copy',  exportOptions:{ columns: ':not(:last-child)' } },
-                    { extend:'csv',   text:'CSV',   filename:'calidad_desechos_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
-                    { extend:'excel', text:'Excel', filename:'calidad_desechos_'+hoy, exportOptions:{ columns: ':not(:last-child)' } },
-                    { extend:'pdf',   text:'PDF',   filename:'calidad_desechos_'+hoy, title:'Registro de desecho',
-                        orientation:'landscape', pageSize:'A4', exportOptions:{ columns: ':not(:last-child)' } },
-                    { extend:'print', text:'Print', exportOptions:{ columns: ':not(:last-child)' } }
+                    { extend: 'copy', text: 'Copy', exportOptions: { columns: ':not(:last-child)' } },
+                    { extend: 'csv', text: 'CSV', filename: 'calidad_desechos_' + hoy, exportOptions: { columns: ':not(:last-child)' } },
+                    { extend: 'excel', text: 'Excel', filename: 'calidad_desechos_' + hoy, exportOptions: { columns: ':not(:last-child)' } },
+                    {
+                        extend: 'pdf', text: 'PDF', filename: 'calidad_desechos_' + hoy, title: 'Registro de desecho',
+                        orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: ':not(:last-child)' }
+                    },
+                    { extend: 'print', text: 'Print', exportOptions: { columns: ':not(:last-child)' } }
                 ]
             });
         }
 
-        const tieneDatosReprocesos = $('#tablaReprocesos tbody tr').filter(function(){
+        const tieneDatosReprocesos = $('#tablaReprocesos tbody tr').filter(function () {
             return !$(this).find('td[colspan]').length;
         }).length > 0;
 
         if (tieneDatosReprocesos) {
             $('#tablaReprocesos').DataTable({
                 language: langES,
-                columnDefs: [{ orderable:false, searchable:false, targets:[4] }],
-                dom:"<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
+                columnDefs: [{ orderable: false, searchable: false, targets: [4] }],
+                dom: "<'row mb-2'<'col-12 col-md-6 d-flex align-items-center text-md-start'B><'col-12 col-md-6 text-md-end'f>>" +
                     "<'row'<'col-12'tr>>" +
                     "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
                 buttons: [
-                    { extend:'copy',  text:'Copy',  exportOptions:{ columns:[0,1,2,3] } },
-                    { extend:'csv',   text:'CSV',   filename:'calidad_reprocesos_'+hoy, exportOptions:{ columns:[0,1,2,3] } },
-                    { extend:'excel', text:'Excel', filename:'calidad_reprocesos_'+hoy, exportOptions:{ columns:[0,1,2,3] } },
-                    { extend:'pdf',   text:'PDF',   filename:'calidad_reprocesos_'+hoy, title:'Unidades en reproceso',
-                        orientation:'landscape', pageSize:'A4', exportOptions:{ columns:[0,1,2,3] } },
-                    { extend:'print', text:'Print', exportOptions:{ columns:[0,1,2,3] } }
+                    { extend: 'copy', text: 'Copy', exportOptions: { columns: [0, 1, 2, 3] } },
+                    { extend: 'csv', text: 'CSV', filename: 'calidad_reprocesos_' + hoy, exportOptions: { columns: [0, 1, 2, 3] } },
+                    { extend: 'excel', text: 'Excel', filename: 'calidad_reprocesos_' + hoy, exportOptions: { columns: [0, 1, 2, 3] } },
+                    {
+                        extend: 'pdf', text: 'PDF', filename: 'calidad_reprocesos_' + hoy, title: 'Unidades en reproceso',
+                        orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: [0, 1, 2, 3] }
+                    },
+                    { extend: 'print', text: 'Print', exportOptions: { columns: [0, 1, 2, 3] } }
                 ]
             });
         }
 
         // Ver: Desecho
-        $(document).on('click', '.ver-desecho', async function(){
+        $(document).on('click', '.ver-desecho', async function () {
             const id = this.dataset.id;
-            const r  = await (await fetch('<?= site_url('calidad/desperdicios') ?>/'+id)).json();
-            vd_fecha.textContent     = r.fecha || '-';
-            vd_op.textContent        = r.op || '-';
-            vd_cantidad.textContent  = r.cantidad || '-';
-            vd_motivo.textContent    = r.observaciones || '-';
+            const r = await (await fetch('<?= site_url('calidad/desperdicios') ?>/' + id)).json();
+            vd_fecha.textContent = r.fecha || '-';
+            vd_op.textContent = r.op || '-';
+            vd_cantidad.textContent = r.cantidad || '-';
+            vd_motivo.textContent = r.observaciones || '-';
         });
 
         // Ver: Reproceso
-        $(document).on('click', '.ver-rep', async function(){
+        $(document).on('click', '.ver-rep', async function () {
             const id = this.dataset.id;
-            const r  = await (await fetch('<?= site_url('calidad/reprocesos') ?>/'+id)).json();
-            vr_op.textContent         = r.op || '-';
-            vr_tarea.textContent      = r.accion || r.tarea || '-';
+            const r = await (await fetch('<?= site_url('calidad/reprocesos') ?>/' + id)).json();
+            vr_op.textContent = r.op || '-';
+            vr_tarea.textContent = r.accion || r.tarea || '-';
             vr_pendientes.textContent = (r.cantidad ?? r.pendientes) || '-';
-            vr_eta.textContent        = (r.fecha ?? r.eta) || '-';
+            vr_eta.textContent = (r.fecha ?? r.eta) || '-';
         });
 
         // Editar: Desecho
-        $(document).on('click', '.edit-desecho', function(){
+        $(document).on('click', '.edit-desecho', function () {
             const f = formDesecho;
-            f.action = '<?= site_url('calidad/desperdicios') ?>/'+this.dataset.id+'/editar';
-            d_fecha.value    = this.dataset.fecha || '';
-            d_op.value       = this.dataset.op || '';
+            f.action = '<?= site_url('calidad/desperdicios') ?>/' + this.dataset.id + '/editar';
+            d_fecha.value = this.dataset.fecha || '';
+            d_op.value = this.dataset.op || '';
             d_cantidad.value = this.dataset.cantidad || '';
-            d_motivo.value   = this.dataset.motivo || '';
+            d_motivo.value = this.dataset.motivo || '';
         });
-        modalDesecho.addEventListener('show.bs.modal', e=>{
+        modalDesecho.addEventListener('show.bs.modal', e => {
             if (!e.relatedTarget || !e.relatedTarget.classList.contains('edit-desecho')) {
                 formDesecho.action = '<?= site_url('calidad/desperdicios/guardar') ?>';
-                ['d-fecha','d-op','d-cantidad','d-motivo'].forEach(id=>document.getElementById(id).value='');
+                document.getElementById('d-fecha').value = '';
+                document.getElementById('d-op').value = '';
+                document.getElementById('d-cantidad').value = '';
+                document.getElementById('d-motivo').value = '';
             }
         });
 
         // Editar: Reproceso
-        $(document).on('click', '.edit-rep', function(){
+        $(document).on('click', '.edit-rep', function () {
             const f = formReproceso;
-            f.action = '<?= site_url('calidad/reprocesos') ?>/'+this.dataset.id+'/editar';
-            r_op.value         = this.dataset.op || '';
-            r_tarea.value      = this.dataset.tarea || '';
+            f.action = '<?= site_url('calidad/reprocesos') ?>/' + this.dataset.id + '/editar';
+            r_op.value = this.dataset.op || '';
+            r_tarea.value = this.dataset.tarea || '';
             r_pendientes.value = this.dataset.pendientes || '';
-            r_eta.value        = this.dataset.eta || '';
-            r_estado.value     = 'pendiente';
+            r_eta.value = this.dataset.eta || '';
+            r_estado.value = 'pendiente';
         });
-        modalReproceso.addEventListener('show.bs.modal', e=>{
+        modalReproceso.addEventListener('show.bs.modal', e => {
             if (!e.relatedTarget || !e.relatedTarget.classList.contains('edit-rep')) {
                 formReproceso.action = '<?= site_url('calidad/reprocesos/guardar') ?>';
-                ['r-op','r-tarea','r-pendientes','r-eta'].forEach(id=>document.getElementById(id).value='');
+                document.getElementById('r-op').value = '';
+                document.getElementById('r-tarea').value = '';
+                document.getElementById('r-pendientes').value = '';
+                document.getElementById('r-eta').value = '';
                 r_estado.value = 'pendiente';
             }
         });
 
         // ===== Eliminar con SweetAlert2 =====
         const csrfName = '<?= csrf_token() ?>';
-        let   csrfHash = '<?= csrf_hash() ?>';
+        let csrfHash = '<?= csrf_hash() ?>';
 
-        async function confirmarYEliminar({url, row}) {
+        async function confirmarYEliminar({ url, row }) {
             const result = await Swal.fire({
                 title: "¿Eliminar registro?",
                 text: "Esta acción no se puede deshacer.",
@@ -427,10 +487,10 @@
 
             const resp = await fetch(url, {
                 method: 'POST',
-                headers: { 'X-Requested-With':'XMLHttpRequest' },
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 body: fd
             });
-            let json = {}; try { json = await resp.json(); } catch(_){}
+            let json = {}; try { json = await resp.json(); } catch (_) { }
             if (json.csrf) csrfHash = json.csrf;
 
             if (resp.ok && (json.ok ?? true)) {
@@ -441,17 +501,17 @@
             }
         }
 
-        $(document).on('click', '.del-desecho', function(){
-            const id  = this.dataset.id;
+        $(document).on('click', '.del-desecho', function () {
+            const id = this.dataset.id;
             const row = this.closest('tr');
-            const url = '<?= site_url('calidad/desperdicios') ?>/'+id+'/eliminar';
-            confirmarYEliminar({url, row});
+            const url = '<?= site_url('calidad/desperdicios') ?>/' + id + '/eliminar';
+            confirmarYEliminar({ url, row });
         });
-        $(document).on('click', '.del-rep', function(){
-            const id  = this.dataset.id;
+        $(document).on('click', '.del-rep', function () {
+            const id = this.dataset.id;
             const row = this.closest('tr');
-            const url = '<?= site_url('calidad/reprocesos') ?>/'+id+'/eliminar';
-            confirmarYEliminar({url, row});
+            const url = '<?= site_url('calidad/reprocesos') ?>/' + id + '/eliminar';
+            confirmarYEliminar({ url, row });
         });
 
         // ===== Enviar formularios con Swal (AJAX) + FIX cierre modal =====
@@ -469,14 +529,14 @@
                     body: fd
                 });
 
-                let json = null; try { json = await resp.json(); } catch(e) {}
+                let json = null; try { json = await resp.json(); } catch (e) { }
                 if (json && json.csrf) {
                     document.querySelectorAll('input[name="<?= csrf_token() ?>"]').forEach(i => i.value = json.csrf);
                     csrfHash = json.csrf;
                 }
 
                 // Cerrar modales abiertos ANTES de Swal (evita warning aria-hidden)
-                document.querySelectorAll('.modal.show').forEach(el=>{
+                document.querySelectorAll('.modal.show').forEach(el => {
                     const inst = bootstrap.Modal.getInstance(el);
                     if (inst) inst.hide();
                 });
@@ -489,7 +549,7 @@
                 }
             } catch (err) {
                 // Cerrar modales para evitar overlay bloqueado
-                document.querySelectorAll('.modal.show').forEach(el=>{
+                document.querySelectorAll('.modal.show').forEach(el => {
                     const inst = bootstrap.Modal.getInstance(el);
                     if (inst) inst.hide();
                 });
@@ -501,15 +561,15 @@
 
         const formDesecho = document.getElementById('formDesecho');
         const formReproceso = document.getElementById('formReproceso');
-        if (formDesecho) formDesecho.addEventListener('submit', e=>{ e.preventDefault(); enviarFormularioConSwal(e.target); });
-        if (formReproceso) formReproceso.addEventListener('submit', e=>{ e.preventDefault(); enviarFormularioConSwal(e.target); });
+        if (formDesecho) formDesecho.addEventListener('submit', e => { e.preventDefault(); enviarFormularioConSwal(e.target); });
+        if (formReproceso) formReproceso.addEventListener('submit', e => { e.preventDefault(); enviarFormularioConSwal(e.target); });
 
         // Flashdata -> Swal
-        <?php if(session()->getFlashdata('success')): ?>
-        Swal.fire({ icon: 'success', title: 'Éxito', text: '<?= esc(session()->getFlashdata('success')) ?>', confirmButtonColor: '#0d6efd' });
+        <?php if (session()->getFlashdata('success')): ?>
+            Swal.fire({ icon: 'success', title: 'Éxito', text: '<?= esc(session()->getFlashdata('success')) ?>', confirmButtonColor: '#0d6efd' });
         <?php endif; ?>
-        <?php if(session()->getFlashdata('error')): ?>
-        Swal.fire({ icon: 'error', title: 'Error', text: '<?= esc(session()->getFlashdata('error')) ?>', confirmButtonColor: '#0d6efd' });
+        <?php if (session()->getFlashdata('error')): ?>
+            Swal.fire({ icon: 'error', title: 'Error', text: '<?= esc(session()->getFlashdata('error')) ?>', confirmButtonColor: '#0d6efd' });
         <?php endif; ?>
     });
 </script>

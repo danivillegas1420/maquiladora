@@ -36,15 +36,16 @@ class Calidad extends BaseController
         if (!can('menu.desperdicios')) {
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
-        
+
         $mR = new ReprocesoModel();
         $db = \Config\Database::connect();
 
         // Desechos - todos los registros con resultado 'rechazo'
         $desp = $db->table('reproceso r')
             ->select('r.id, r.cantidad, r.fecha, r.accion AS observaciones, 
-                      COALESCE(i.ordenProduccionId, 0) AS op')
+                      COALESCE(ordprod.folio, CAST(i.ordenProduccionId AS CHAR), "N/A") AS op')
             ->join('inspeccion i', 'i.id = r.inspeccionId', 'left')
+            ->join('orden_produccion ordprod', 'ordprod.id = i.ordenProduccionId', 'left')
             ->where('LOWER(i.resultado)', 'rechazo')
             ->orderBy('r.fecha', 'DESC')
             ->get()
@@ -53,10 +54,22 @@ class Calidad extends BaseController
         // Reprocesos - todos los registros con resultado 'reproceso'
         $rep = $db->table('reproceso r')
             ->select('r.id, r.accion AS tarea, r.cantidad AS pendientes, 
-                      r.fecha AS eta, COALESCE(i.ordenProduccionId, 0) AS op')
+                      r.fecha AS eta, COALESCE(ordprod.folio, CAST(i.ordenProduccionId AS CHAR), "N/A") AS op')
             ->join('inspeccion i', 'i.id = r.inspeccionId', 'left')
+            ->join('orden_produccion ordprod', 'ordprod.id = i.ordenProduccionId', 'left')
             ->where('LOWER(i.resultado)', 'reproceso')
             ->orderBy('r.fecha', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        // Cargar órdenes de producción activas para el dropdown
+        $ordenesProduccion = $db->table('orden_produccion op')
+            ->select('op.id, op.folio, c.nombre as cliente_nombre')
+            ->join('orden_compra oc', 'oc.id = op.ordenCompraId', 'left')
+            ->join('cliente c', 'c.id = oc.clienteId', 'left')
+            ->whereIn('op.status', ['pendiente', 'en_proceso', 'activa'])
+            ->orderBy('op.folio', 'DESC')
+            ->limit(100) // Limitar a las últimas 100 órdenes activas
             ->get()
             ->getResultArray();
 
@@ -64,6 +77,7 @@ class Calidad extends BaseController
             'title' => 'Desperdicios & Reprocesos',
             'desp' => $desp,
             'rep' => $rep,
+            'ordenesProduccion' => $ordenesProduccion, // NUEVO
             'todo' => false,
         ]);
     }
@@ -75,7 +89,7 @@ class Calidad extends BaseController
         if (!can('menu.desperdicios')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $post = $this->request->getPost();
         $db = \Config\Database::connect();
 
@@ -121,7 +135,7 @@ class Calidad extends BaseController
         if (!can('menu.desperdicios')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $post = $this->request->getPost();
         $db = \Config\Database::connect();
 
@@ -163,7 +177,7 @@ class Calidad extends BaseController
         if (!can('menu.desperdicios')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $post = $this->request->getPost();
         $mR = new ReprocesoModel();
         $r = $mR->find($id);
@@ -206,7 +220,7 @@ class Calidad extends BaseController
         if (!can('menu.desperdicios')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $post = $this->request->getPost();
         $mR = new ReprocesoModel();
         $r = $mR->find($id);
@@ -339,7 +353,7 @@ class Calidad extends BaseController
         if (!can('menu.desperdicios')) {
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
-        
+
         $row = (new ReprocesoModel())
             ->select('reproceso.*, inspeccion.ordenProduccionId AS op, inspeccion.resultado, inspeccion.observaciones')
             ->join('inspeccion', 'inspeccion.id = reproceso.inspeccionId')
@@ -356,7 +370,7 @@ class Calidad extends BaseController
         if (!can('menu.desperdicios')) {
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
-        
+
         $row = (new ReprocesoModel())
             ->select('reproceso.*, inspeccion.ordenProduccionId AS op')
             ->join('inspeccion', 'inspeccion.id = reproceso.inspeccionId')
