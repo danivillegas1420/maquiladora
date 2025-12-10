@@ -14,19 +14,22 @@
 
     <title><?= esc($title ?? 'Maquiladora') ?></title>
 
-    <!-- Custom fonts for this template-->
-    <link href="<?= base_url('vendor/fontawesome-free/css/all.min.css') ?>" rel="stylesheet" type="text/css">
+    <!-- Custom fonts for this template -->
     <link
         href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
         rel="stylesheet">
 
     <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css?v=<?= time() ?>" rel="stylesheet">
+
+    <!-- FontAwesome (temporal para compatibilidad con sb-admin-2.min.css) -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css?v=<?= time() ?>" rel="stylesheet">
 
     <!-- DataTables -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css?v=<?= time() ?>">
 
     <!-- Animate CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css?v=<?= time() ?>" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template-->
@@ -66,6 +69,58 @@
         /* Topbar en modo claro - fondo suave */
         body:not([data-theme="dark"]) .topbar {
             background-color: #fafaf8 !important;
+        }
+
+        /* Specific fix for notification bell icon in light mode */
+        body:not([data-theme="dark"]) .topbar .fa-bell,
+        body:not([data-theme="dark"]) .topbar .fas.fa-bell {
+            color: #212529 !important;
+            font-size: 1.1rem !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* Alinear ícono de notificaciones con demás elementos */
+        .topbar .nav-link[href*="notificaciones"] {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: auto !important;
+            padding: 0.5rem 0.75rem !important;
+            margin-top: 12px !important;
+            vertical-align: middle !important;
+        }
+
+        .topbar .nav-link[href*="notificaciones"] .bi-bell-fill {
+            font-size: 1.1rem !important;
+            line-height: 1 !important;
+            vertical-align: middle !important;
+            margin: 0 !important;
+            position: relative !important;
+            top: 3px !important;
+        }
+
+        /* Ensure notification link is always visible */
+        body:not([data-theme="dark"]) .topbar .nav-link[href*="notificaciones"] {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        body:not([data-theme="dark"]) .topbar .nav-link[href*="notificaciones"] .fa-bell,
+        body:not([data-theme="dark"]) .topbar .nav-link[href*="notificaciones"] .fas.fa-bell {
+            color: #212529 !important;
+            font-size: 1.1rem !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        body[data-theme="dark"] .topbar .nav-link[href*="notificaciones"] .fa-bell,
+        body[data-theme="dark"] .topbar .nav-link[href*="notificaciones"] .fas.fa-bell {
+            color: #f8f9fa !important;
+            font-size: 1.1rem !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
 
         /* Sidebar en modo claro */
@@ -582,13 +637,23 @@
         body[data-theme="dark"] .topbar .text-gray-600,
         body[data-theme="dark"] .topbar .small,
         body[data-theme="dark"] .topbar .dropdown-toggle {
-            color: #adb5bd !important;
+            color: #f8f9fa !important;
         }
 
-        /* Fix notification badge */
-        body[data-theme="dark"] .badge-danger {
-            background-color: #dc3545 !important;
+        /* Specific fix for notification bell icon */
+        body[data-theme="dark"] .topbar .fa-bell,
+        body[data-theme="dark"] .topbar .fas.fa-bell {
             color: #ffffff !important;
+            font-size: 1.1rem !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* Ensure notification link is always visible in dark mode */
+        body[data-theme="dark"] .topbar .nav-link[href*="notificaciones"] {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
 
         /* Ensure all topbar elements are visible */
@@ -1042,7 +1107,7 @@
 
                     <!-- Sidebar Toggle (Topbar) -->
                     <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
-                        <i class="fa fa-bars"></i>
+                        <i class="bi bi-list"></i>
                     </button>
 
                     <!-- Topbar Navbar -->
@@ -1051,7 +1116,7 @@
                         <!-- Nav Item - Alerts -->
                         <li class="nav-item dropdown no-arrow mx-1">
                             <a class="nav-link" href="<?= base_url('modulo3/notificaciones2') ?>">
-                                <i class="fas fa-bell fa-fw"></i>
+                                <i class="bi bi-bell-fill"></i>
                                 <!-- Counter - Alerts -->
                                 <?php if ($notifCount > 0): ?>
                                     <span class="badge badge-danger badge-counter"><?= esc($notifCount) ?></span>
@@ -1075,18 +1140,18 @@
                                 <span class="mr-2 d-none d-lg-inline text-gray-600 small">
                                     <?= esc(session()->get('user_name') ?? session()->get('username') ?? 'Usuario') ?>
                                 </span>
-                                <i class="fas fa-user-circle fa-2x"></i>
+                                <i class="bi bi-person-circle fs-4"></i>
                             </a>
                             <!-- Dropdown - User Information -->
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                                 aria-labelledby="userDropdown">
                                 <a class="dropdown-item" href="<?= base_url('modulo1/perfilempleado') ?>">
-                                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    <i class="bi bi-person me-2"></i>
                                     Perfil
                                 </a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="<?= base_url('logout') ?>">
-                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    <i class="bi bi-box-arrow-right me-2"></i>
                                     Cerrar sesión
                                 </a>
                             </div>
@@ -1110,7 +1175,7 @@
             <footer class="sticky-footer bg-white">
                 <div class="container my-auto">
                     <div class="copyright text-center my-auto">
-                        <span>© <?= date('Y') ?> Maquiladora</span>
+                        <span> Maquiladora</span>
                     </div>
                 </div>
             </footer>
@@ -1124,18 +1189,17 @@
 
     <!-- Scroll to Top Button-->
     <a class="scroll-to-top rounded" href="#page-top">
-        <i class="fas fa-angle-up"></i>
+        <i class="bi bi-arrow-up"></i>
     </a>
 
     <!-- Scripts: cargados al final para mejor performance -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
     <!-- Core plugin JavaScript-->
-    <script src="<?= base_url('vendor/jquery-easing/jquery.easing.min.js') ?>"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
 
     <!-- Custom scripts for all pages-->
     <script src="<?= base_url('js/sb-admin-2.min.js') ?>"></script>
@@ -1144,7 +1208,6 @@
     <script>
         (function () {
             const STORAGE_KEY = 'theme';
-
             function getPreferredTheme() {
                 try {
                     const stored = localStorage.getItem(STORAGE_KEY);

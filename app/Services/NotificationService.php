@@ -33,9 +33,10 @@ class NotificationService
         string $mensaje,
         ?string $sub = null,
         string $nivel = 'info',
-        ?string $color = null
+        ?string $color = null,
+        ?string $tipoNotificacion = null
     ) {
-        log_message('debug', "NOTIFICATION DEBUG - createNotification llamado con: maquiladora={$maquiladoraId}, titulo='{$titulo}', mensaje='{$mensaje}'");
+        log_message('debug', "NOTIFICATION DEBUG - createNotification llamado con: maquiladora={$maquiladoraId}, titulo='{$titulo}', mensaje='{$mensaje}', tipo='{$tipoNotificacion}'");
         
         $db = \Config\Database::connect();
         $db->transStart();
@@ -61,13 +62,15 @@ class NotificationService
 
             log_message('debug', "NOTIFICATION DEBUG - Notificación insertada con ID: {$notificationId}");
 
-            // Obtener todos los usuarios de la maquiladora
-            $usuarios = $db->table('users')
-                           ->where('maquiladoraIdFK', $maquiladoraId)
-                           ->get()
-                           ->getResultArray();
+            // Obtener usuarios que deben recibir esta notificación según su rol
+            log_message('debug', "NOTIFICATION DEBUG - Llamando a getUsuariosPorTipoNotificacion con maquiladora: {$maquiladoraId}, tipo: " . ($tipoNotificacion ?? 'NULL'));
+            $usuarios = $this->getUsuariosPorTipoNotificacion($maquiladoraId, $tipoNotificacion);
 
             log_message('debug', "NOTIFICATION DEBUG - Usuarios encontrados: " . count($usuarios));
+            
+            // Mostrar IDs de usuarios que recibirán la notificación
+            $usuarioIds = array_map(function($u) { return $u['id']; }, $usuarios);
+            log_message('debug', "NOTIFICATION DEBUG - IDs de usuarios que recibirán notificación: " . implode(', ', $usuarioIds));
 
             // Asignar la notificación a cada usuario
             foreach ($usuarios as $usuario) {
@@ -98,6 +101,61 @@ class NotificationService
     }
 
     /**
+     * Obtiene los usuarios que deben recibir una notificación según su rol
+     */
+    private function getUsuariosPorTipoNotificacion(int $maquiladoraId, ?string $tipoNotificacion): array
+    {
+        $db = \Config\Database::connect();
+        
+        // Si no hay tipo de notificación, enviar a todos (comportamiento anterior)
+        if (!$tipoNotificacion) {
+            log_message('debug', "NOTIFICATION DEBUG - Sin tipo de notificación, enviando a todos");
+            return $db->table('users')
+                ->where('maquiladoraIdFK', $maquiladoraId)
+                ->get()
+                ->getResultArray();
+        }
+
+        // Verificar si existe la tabla rol_notificacion
+        if (!$db->tableExists('rol_notificacion')) {
+            log_message('warning', "NOTIFICATION DEBUG - La tabla rol_notificacion no existe, enviando a todos");
+            return $db->table('users')
+                ->where('maquiladoraIdFK', $maquiladoraId)
+                ->get()
+                ->getResultArray();
+        }
+
+        // Verificar si hay configuraciones para este tipo de notificación
+        $configCount = $db->table('rol_notificacion')
+            ->where('tipo_notificacion', $tipoNotificacion)
+            ->countAllResults();
+        
+        log_message('debug', "NOTIFICATION DEBUG - Configuraciones encontradas para '{$tipoNotificacion}': {$configCount}");
+        
+        if ($configCount == 0) {
+            log_message('warning', "NOTIFICATION DEBUG - No hay roles configurados para '{$tipoNotificacion}', enviando a todos");
+            return $db->table('users')
+                ->where('maquiladoraIdFK', $maquiladoraId)
+                ->get()
+                ->getResultArray();
+        }
+
+        // Obtener usuarios cuyos roles tienen permiso para este tipo de notificación
+        $usuarios = $db->table('users u')
+            ->select('u.id')
+            ->join('usuario_rol ur', 'ur.usuarioIdFK = u.id')
+            ->join('rol_notificacion rn', 'rn.rol_id = ur.rolIdFK')
+            ->where('u.maquiladoraIdFK', $maquiladoraId)
+            ->where('rn.tipo_notificacion', $tipoNotificacion)
+            ->get()
+            ->getResultArray();
+        
+        log_message('debug', "NOTIFICATION DEBUG - Usuarios filtrados para '{$tipoNotificacion}': " . count($usuarios));
+        
+        return $usuarios;
+    }
+
+    /**
      * Get color based on level
      */
     protected function getColorForLevel(string $nivel): string
@@ -124,7 +182,9 @@ class NotificationService
                 'Stock Agotado',
                 "El material '{$material}' está agotado",
                 'Requiere atención inmediata',
-                'danger'
+                'danger',
+                null,
+                'mrp_materiales'
             );
         } elseif ($percentage < 20) {
             return $this->createNotification(
@@ -132,7 +192,9 @@ class NotificationService
                 'Stock Bajo',
                 "El material '{$material}' tiene stock bajo ({$stock} unidades)",
                 'Considere realizar un pedido',
-                'warning'
+                'warning',
+                null,
+                'mrp_materiales'
             );
         }
 
@@ -151,7 +213,9 @@ class NotificationService
             "Nuevo {$typeText} Registrado",
             "Se ha registrado un nuevo {$typeText} de {$cantidad} unidades",
             'Revisar en módulo de Calidad',
-            'warning'
+            'warning',
+            null,
+            'incidencias'
         );
     }
 
@@ -165,7 +229,9 @@ class NotificationService
             'Nuevo Cliente',
             "Se ha agregado el cliente '{$clientName}'",
             null,
-            'success'
+            'success',
+            null,
+            'clientes'
         );
     }
 
@@ -180,7 +246,9 @@ class NotificationService
                 'Cambio de Estado en Muestra',
                 "La muestra '{$sampleName}' cambió a: {$status}",
                 null,
-                'info'
+                'info',
+                null,
+                'muestras'
             );
         } else {
             return $this->createNotification(
@@ -188,7 +256,9 @@ class NotificationService
                 'Nueva Muestra',
                 "Se ha creado la muestra '{$sampleName}'",
                 null,
-                'success'
+                'success',
+                null,
+                'muestras'
             );
         }
     }
@@ -204,7 +274,9 @@ class NotificationService
                 'Nueva Orden de Trabajo',
                 "Se ha creado la orden #{$orderNumber}",
                 null,
-                'info'
+                'info',
+                null,
+                'ordenes_produccion'
             );
         } else {
             return $this->createNotification(
@@ -212,7 +284,9 @@ class NotificationService
                 'Cambio en Orden',
                 "La orden #{$orderNumber} ha cambiado de estado",
                 null,
-                'info'
+                'info',
+                null,
+                'ordenes_produccion'
             );
         }
     }
@@ -227,7 +301,9 @@ class NotificationService
             'Materiales Necesarios',
             "Se requieren {$cantidad} unidades de '{$material}'",
             'Revisar en módulo MRP',
-            'warning'
+            'warning',
+            null,
+            'mrp_materiales'
         );
     }
 
@@ -241,7 +317,9 @@ class NotificationService
             'Orden de Compra Generada',
             "Se generó la OC #{$ocId} para '{$material}'",
             'Ver detalles en MRP',
-            'success'
+            'success',
+            null,
+            'mrp_materiales'
         );
     }
 
@@ -255,7 +333,9 @@ class NotificationService
             'Nuevo Cliente Agregado',
             "Se ha registrado el cliente: {$clienteNombre}",
             null,
-            'success'
+            'success',
+            null,
+            'clientes'
         );
     }
 
@@ -269,7 +349,9 @@ class NotificationService
             'Cliente Actualizado',
             "Se han actualizado los datos del cliente: {$clienteNombre}",
             null,
-            'info'
+            'info',
+            null,
+            'clientes'
         );
     }
 
@@ -283,7 +365,9 @@ class NotificationService
             'Cliente Eliminado',
             "Se ha eliminado el cliente: {$clienteNombre}",
             null,
-            'warning'
+            'warning',
+            null,
+            'clientes'
         );
     }
 
@@ -297,7 +381,9 @@ class NotificationService
             'Nuevo Diseño Agregado',
             "Se ha creado el diseño: {$codigo} - {$disenoNombre}",
             null,
-            'success'
+            'success',
+            null,
+            'disenos'
         );
     }
 
@@ -311,7 +397,9 @@ class NotificationService
             'Diseño Actualizado',
             "Se ha actualizado el diseño: {$codigo} - {$disenoNombre}",
             null,
-            'info'
+            'info',
+            null,
+            'disenos'
         );
     }
 
@@ -325,7 +413,9 @@ class NotificationService
             'Diseño Eliminado',
             "Se ha eliminado el diseño: {$codigo} - {$disenoNombre}",
             null,
-            'warning'
+            'warning',
+            null,
+            'disenos'
         );
     }
 
@@ -339,7 +429,9 @@ class NotificationService
             'Nuevo Pedido Creado',
             "Se ha creado el pedido {$pedidoCodigo} para el cliente {$clienteNombre}",
             null,
-            'info'
+            'info',
+            null,
+            'pedidos'
         );
     }
 
@@ -364,7 +456,9 @@ class NotificationService
             'Estatus de Orden Actualizado',
             "La orden {$ordenFolio} ha cambiado a estatus: {$nuevoEstatus}",
             "Cliente: {$clienteNombre}",
-            $nivel
+            $nivel,
+            null,
+            'pedidos'
         );
     }
 
@@ -378,7 +472,9 @@ class NotificationService
             'Estado de Pedido Actualizado',
             "El pedido {$pedidoCodigo} ha cambiado a estado: {$estado}",
             null,
-            'info'
+            'info',
+            null,
+            'pedidos'
         );
     }
 
@@ -392,7 +488,9 @@ class NotificationService
             'Nueva Orden de Producción',
             "Se ha creado la orden de producción: {$ordenCodigo}",
             null,
-            'info'
+            'info',
+            null,
+            'ordenes_produccion'
         );
     }
 
@@ -406,7 +504,9 @@ class NotificationService
             'Mantenimiento Programado',
             "Se ha programado mantenimiento para {$maquinaNombre} el {$fecha}",
             null,
-            'warning'
+            'warning',
+            null,
+            'mantenimiento'
         );
     }
 
@@ -420,7 +520,9 @@ class NotificationService
             'Incidencia Reportada',
             "Se ha reportado una incidencia: {$tipoIncidencia} - {$descripcion}",
             null,
-            'danger'
+            'danger',
+            null,
+            'incidencias'
         );
     }
 
@@ -434,7 +536,9 @@ class NotificationService
             'Empleado Asignado a Orden',
             "Se ha asignado a {$empleadoNombre} ({$empleadoPuesto}) a la orden {$ordenFolio}",
             null,
-            'info'
+            'info',
+            null,
+            'ordenes_produccion'
         );
     }
 
@@ -448,7 +552,9 @@ class NotificationService
             'Empleados Asignados a Orden',
             "Se han asignado {$cantidadEmpleados} empleados a la orden {$ordenFolio}",
             null,
-            'info'
+            'info',
+            null,
+            'ordenes_produccion'
         );
     }
 
@@ -464,7 +570,9 @@ class NotificationService
             'Muestra Aprobada',
             "La muestra del prototipo {$prototipoId} ha sido aprobada",
             "Cliente: {$clienteNombre}",
-            'success'
+            'success',
+            null,
+            'muestras'
         );
         
         log_message('debug', "NOTIFICATION DEBUG - notifyMuestraAprobada resultado: {$result}");
@@ -483,7 +591,9 @@ class NotificationService
             'Muestra Rechazada',
             "La muestra del prototipo {$prototipoId} ha sido rechazada",
             "Cliente: {$clienteNombre}",
-            'warning'
+            'warning',
+            null,
+            'muestras'
         );
         
         log_message('debug', "NOTIFICATION DEBUG - notifyMuestraRechazada resultado: {$result}");
@@ -500,7 +610,9 @@ class NotificationService
             'Incidencia Registrada',
             "Se ha reportado una incidencia tipo: {$tipoIncidencia} en la orden {$ordenFolio}",
             "Descripción: {$descripcion}",
-            'danger'
+            'danger',
+            null,
+            'incidencias'
         );
     }
 
@@ -514,7 +626,9 @@ class NotificationService
             'Inspección Aprobada',
             "La inspección {$numeroInspeccion} ha sido aprobada",
             "Orden: {$ordenFolio} - Punto: {$puntoInspeccion}",
-            'success'
+            'success',
+            null,
+            'inspeccion'
         );
     }
 
@@ -528,49 +642,57 @@ class NotificationService
             'Inspección Rechazada',
             "La inspección {$numeroInspeccion} ha sido rechazada",
             "Orden: {$ordenFolio} - Punto: {$puntoInspeccion}",
-            'danger'
+            'danger',
+            null,
+            'inspeccion'
         );
     }
 
     /**
      * Notificación cuando se crea un nuevo rol
      */
-    public function notifyRolCreado(int $maquiladoraId, string $nombreRol, string $descripcion): int|false
+    public function notifyRolCreado(int $maquiladoraId, string $rolNombre, string $rolDescripcion): int|false
     {
         return $this->createNotification(
             $maquiladoraId,
             'Nuevo Rol Creado',
-            "Se ha creado el rol: {$nombreRol}",
-            "Descripción: {$descripcion}",
-            'info'
+            "Se ha creado el rol: {$rolNombre}",
+            $rolDescripcion,
+            'success',
+            null,
+            'sistema'
         );
     }
 
     /**
      * Notificación cuando se actualiza un rol
      */
-    public function notifyRolActualizado(int $maquiladoraId, string $nombreRol, string $descripcion): int|false
+    public function notifyRolActualizado(int $maquiladoraId, string $rolNombre, string $rolDescripcion): int|false
     {
         return $this->createNotification(
             $maquiladoraId,
             'Rol Actualizado',
-            "Se ha actualizado el rol: {$nombreRol}",
-            "Descripción: {$descripcion}",
-            'warning'
+            "Se ha actualizado el rol: {$rolNombre}",
+            $rolDescripcion,
+            'info',
+            null,
+            'sistema'
         );
     }
 
     /**
      * Notificación cuando se actualizan los permisos de un rol
      */
-    public function notifyPermisosRolActualizados(int $maquiladoraId, string $nombreRol, int $cantidadPermisos): int|false
+    public function notifyPermisosRolActualizados(int $maquiladoraId, string $rolNombre, int $cantidadPermisos): int|false
     {
         return $this->createNotification(
             $maquiladoraId,
             'Permisos de Rol Actualizados',
-            "Se han actualizado los permisos del rol: {$nombreRol}",
-            "Cantidad de permisos asignados: {$cantidadPermisos}",
-            'warning'
+            "Se han actualizado los permisos del rol: {$rolNombre}",
+            "Total de permisos: {$cantidadPermisos}",
+            'info',
+            null,
+            'sistema'
         );
     }
 
@@ -584,7 +706,9 @@ class NotificationService
             'Usuario Actualizado',
             "Se ha actualizado el usuario: {$nombreUsuario}",
             "Email: {$email}",
-            'warning'
+            'warning',
+            null,
+            'sistema'
         );
     }
 
@@ -598,7 +722,9 @@ class NotificationService
             'Nuevo Usuario Registrado',
             "Se ha registrado un nuevo usuario: {$nombreUsuario}",
             "Email: {$email}",
-            'info'
+            'info',
+            null,
+            'sistema'
         );
     }
 }

@@ -2422,24 +2422,34 @@ public function m11_eliminar_usuario()
         try {
             // Si la tabla de permisos no existe, devolvemos lista vacía
             if (!$db->tableExists('rol_permiso')) {
-                return $this->response->setJSON([
-                    'success' => true,
-                    'permisos' => [],
-                ]);
+                $permisoList = [];
+            } else {
+                // Obtener permisos del rol desde la tabla rol_permiso
+                $permisos = $db->table('rol_permiso')
+                    ->select('permiso')
+                    ->where('rol_id', $rolId)
+                    ->get()
+                    ->getResultArray();
+
+                $permisoList = array_column($permisos, 'permiso');
             }
 
-            // Obtener permisos del rol desde la tabla rol_permiso
-            $permisos = $db->table('rol_permiso')
-                ->select('permiso')
-                ->where('rol_id', $rolId)
-                ->get()
-                ->getResultArray();
+            // Obtener notificaciones del rol desde la tabla rol_notificacion
+            $notifList = [];
+            if ($db->tableExists('rol_notificacion')) {
+                $notificaciones = $db->table('rol_notificacion')
+                    ->select('tipo_notificacion')
+                    ->where('rol_id', $rolId)
+                    ->get()
+                    ->getResultArray();
 
-            $permisoList = array_column($permisos, 'permiso');
+                $notifList = array_column($notificaciones, 'tipo_notificacion');
+            }
 
             return $this->response->setJSON([
                 'success' => true,
-                'permisos' => $permisoList
+                'permisos' => $permisoList,
+                'notificaciones' => $notifList
             ]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([
@@ -2468,8 +2478,10 @@ public function m11_roles_guardar_permisos()
 
     $rolId = (int) ($this->request->getPost('rol_id') ?? $this->request->getVar('rol_id') ?? 0);
     $permisos = $this->request->getPost('permisos') ?? [];
+    $notificaciones = $this->request->getPost('notificaciones') ?? [];
 
     log_message('debug', 'Guardando permisos - rol_id: ' . $rolId . ', permisos: ' . json_encode($permisos));
+    log_message('debug', 'Guardando notificaciones - rol_id: ' . $rolId . ', notificaciones: ' . json_encode($notificaciones));
 
     if ($rolId <= 0) {
         return $this->response->setStatusCode(400)->setJSON([
@@ -2482,6 +2494,9 @@ public function m11_roles_guardar_permisos()
 
     try {
         $db->transStart();
+
+        // Verificar y crear tabla rol_notificacion si no existe
+        $this->crearTablaRolNotificacionSiNoExiste($db);
 
         // Eliminar permisos actuales de ese rol
         $db->table('rol_permiso')->where('rol_id', $rolId)->delete();
@@ -2512,6 +2527,28 @@ public function m11_roles_guardar_permisos()
             }
             log_message('debug', 'Datos a insertar en rol_permiso: ' . json_encode($data));
             $db->table('rol_permiso')->insertBatch($data);
+        }
+
+        // Eliminar notificaciones actuales de ese rol
+        if ($db->tableExists('rol_notificacion')) {
+            $db->table('rol_notificacion')->where('rol_id', $rolId)->delete();
+            
+            // Insertar nuevas notificaciones
+            if (!empty($notificaciones)) {
+                $notifData = [];
+                foreach ($notificaciones as $notif) {
+                    $row = [
+                        'rol_id' => $rolId,
+                        'tipo_notificacion' => trim($notif),
+                    ];
+                    if ($maquiladoraId !== null) {
+                        $row['maquiladoraID'] = $maquiladoraId;
+                    }
+                    $notifData[] = $row;
+                }
+                log_message('debug', 'Datos a insertar en rol_notificacion: ' . json_encode($notifData));
+                $db->table('rol_notificacion')->insertBatch($notifData);
+            }
         }
 
         $db->transComplete();
@@ -2631,6 +2668,9 @@ public function m11_roles_guardar_permisos()
 
         try {
             $db = \Config\Database::connect();
+            
+            // Verificar y crear tabla rol_notificacion si no existe
+            $this->crearTablaRolNotificacionSiNoExiste($db);
 
             // Verificar si la tabla existe
             $this->crearTablaRolPermisoSiNoExiste($db);
@@ -2649,6 +2689,40 @@ public function m11_roles_guardar_permisos()
             return $this->response->setStatusCode(500)->setJSON([
                 'success' => false,
                 'message' => 'Error al inicializar permisos: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Limpiar todas las notificaciones (GET)
+     * Endpoint: modulo11/limpiar_notificaciones
+     */
+    public function limpiar_notificaciones()
+    {
+        if (!can('menu.roles')) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado',
+            ]);
+        }
+
+        try {
+            $db = \Config\Database::connect();
+            
+            // Limpiar todas las notificaciones
+            $db->table('notificaciones')->emptyTable();
+            $db->table('usuarioNotificacion')->emptyTable();
+            
+            log_message('info', 'Todas las notificaciones han sido limpiadas manualmente');
+
+            return $this->response->setJSON([
+                'success' => true,
+                'message' => 'Todas las notificaciones han sido eliminadas'
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'success' => false,
+                'message' => 'Error al limpiar notificaciones: ' . $e->getMessage()
             ]);
         }
     }
@@ -3580,5 +3654,30 @@ public function m11_roles_guardar_permisos()
             'cantidad_plan'       => $cantidadPlan,
             'paginas_img'         => $paginasImg,
         ]);
+    }
+
+    /**
+     * Crear tabla rol_notificacion si no existe
+     */
+    private function crearTablaRolNotificacionSiNoExiste($db)
+    {
+        if (!$db->tableExists('rol_notificacion')) {
+            $sql = "
+                CREATE TABLE `rol_notificacion` (
+                    `id` int(11) NOT NULL AUTO_INCREMENT,
+                    `rol_id` int(11) NOT NULL,
+                    `tipo_notificacion` varchar(50) NOT NULL,
+                    `maquiladoraID` int(11) DEFAULT NULL,
+                    `created_at` datetime NOT NULL,
+                    `updated_at` datetime NOT NULL,
+                    PRIMARY KEY (`id`),
+                    UNIQUE KEY `rol_tipo_unique` (`rol_id`,`tipo_notificacion`),
+                    KEY `rol_notificacion_rol_id_foreign` (`rol_id`),
+                    CONSTRAINT `rol_notificacion_rol_id_foreign` FOREIGN KEY (`rol_id`) REFERENCES `rol` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ";
+            $db->query($sql);
+            log_message('info', 'Tabla rol_notificacion creada exitosamente');
+        }
     }
 }

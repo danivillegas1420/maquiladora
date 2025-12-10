@@ -318,6 +318,96 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Notificaciones por Rol -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h6 class="text-purple mb-3">
+                                <i class="bi bi-bell"></i> Notificaciones por Rol
+                            </h6>
+                            <div class="alert alert-info">
+                                <small class="mb-0">
+                                    <strong>Selecciona qué tipos de notificaciones recibirán los usuarios con este rol.</strong><br>
+                                    Las notificaciones no seleccionadas no se mostrarán a los usuarios de este rol.
+                                </small>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="clientes" id="notif_clientes">
+                                        <label class="form-check-label" for="notif_clientes">
+                                            <i class="bi bi-people"></i> Clientes (altas, bajas, cambios)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="disenos" id="notif_disenos">
+                                        <label class="form-check-label" for="notif_disenos">
+                                            <i class="bi bi-palette"></i> Diseños (creación, actualización)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="pedidos" id="notif_pedidos">
+                                        <label class="form-check-label" for="notif_pedidos">
+                                            <i class="bi bi-cart"></i> Pedidos (nuevos, cambios de estado)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="ordenes_produccion" id="notif_ordenes_produccion">
+                                        <label class="form-check-label" for="notif_ordenes_produccion">
+                                            <i class="bi bi-gear"></i> Órdenes de Producción
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="mantenimiento" id="notif_mantenimiento">
+                                        <label class="form-check-label" for="notif_mantenimiento">
+                                            <i class="bi bi-tools"></i> Mantenimiento (programado, correctivo)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="muestras" id="notif_muestras">
+                                        <label class="form-check-label" for="notif_muestras">
+                                            <i class="bi bi-eye"></i> Muestras (aprobadas, rechazadas)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="inspeccion" id="notif_inspeccion">
+                                        <label class="form-check-label" for="notif_inspeccion">
+                                            <i class="bi bi-clipboard-check"></i> Inspección (resultados)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="incidencias" id="notif_incidencias">
+                                        <label class="form-check-label" for="notif_incidencias">
+                                            <i class="bi bi-exclamation-triangle"></i> Incidencias (reportes)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="mrp_materiales" id="notif_mrp_materiales">
+                                        <label class="form-check-label" for="notif_mrp_materiales">
+                                            <i class="bi bi-box"></i> MRP y Materiales (stock bajo, OC)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input notif-checkbox" type="checkbox" value="sistema" id="notif_sistema">
+                                        <label class="form-check-label" for="notif_sistema">
+                                            <i class="bi bi-gear-fill"></i> Sistema (usuarios, roles)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="notif_todas">
+                                        <label class="form-check-label" for="notif_todas">
+                                            <strong>Seleccionar todas las notificaciones</strong>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -527,6 +617,7 @@
                 
                 // Limpiar checkboxes
                 $('.permiso-checkbox').prop('checked', false);
+                $('.notif-checkbox').prop('checked', false);
                 
                 // Si es el rol Cliente, mostrar solo Pedidos Clientes
                 if (nombre.toLowerCase() === 'cliente') {
@@ -557,6 +648,12 @@
                         response.permisos.forEach(function(permiso) {
                             $('.permiso-checkbox[value="' + permiso + '"]').prop('checked', true);
                         });
+                        // Marcar las notificaciones que tiene el rol
+                        if (response.notificaciones) {
+                            response.notificaciones.forEach(function(notificacion) {
+                                $('.notif-checkbox[value="' + notificacion + '"]').prop('checked', true);
+                            });
+                        }
                     }
                 })
                 .fail(function(xhr){
@@ -589,14 +686,33 @@
                 $('#perm_todos').prop('checked', total > 0 && marcados === total);
             });
 
+            // Seleccionar / deseleccionar todas las notificaciones
+            $('#notif_todas').on('change', function(){
+                const checked = $(this).is(':checked');
+                $('.notif-checkbox').prop('checked', checked);
+            });
+
+            // Mantener sincronizado el checkbox "Seleccionar todas notificaciones" cuando se cambian individuales
+            $(document).on('change', '.notif-checkbox', function(){
+                const total = $('.notif-checkbox').length;
+                const marcados = $('.notif-checkbox:checked').length;
+                $('#notif_todas').prop('checked', total > 0 && marcados === total);
+            });
+
             // Guardar permisos del rol
             $('#btnGuardarPermisos').on('click', function(){
                 const rolId = $('#modalPermisosRol').data('rol-id');
                 const permisosSeleccionados = [];
+                const notificacionesSeleccionadas = [];
                 
                 // Recopilar permisos seleccionados
                 $('.permiso-checkbox:checked').each(function(){
                     permisosSeleccionados.push($(this).val());
+                });
+                
+                // Recopilar notificaciones seleccionadas
+                $('.notif-checkbox:checked').each(function(){
+                    notificacionesSeleccionadas.push($(this).val());
                 });
                 
                 const $btn = $(this);
@@ -609,7 +725,8 @@
                     method: 'POST',
                     data: {
                         rol_id: rolId,
-                        permisos: permisosSeleccionados
+                        permisos: permisosSeleccionados,
+                        notificaciones: notificacionesSeleccionadas
                     },
                     dataType: 'json'
                 })

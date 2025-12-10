@@ -801,3 +801,8 @@ $routes->group('modulo1/pagos', ['filter' => 'auth:Administrador,Jefe,RH'], stat
     $r->post('reporte-diario', 'PagosController::reporteDiario');
     $r->get('exportar', 'PagosController::exportar');
 });
+
+// Ruta temporal para probar íconos
+$routes->get('test-icons', function() {
+    return view('layouts/test');
+});

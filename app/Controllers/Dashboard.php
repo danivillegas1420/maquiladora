@@ -17,6 +17,9 @@ class Dashboard extends BaseController
         // Obtener datos del servicio
         $kpis = $service->getKPIs();
         $notifications = $service->getNotifications($userId);
+        
+        // Calcular notificaciones no leídas
+        $notifCount = count($notifications);
 
         // Datos para gráficas
         $charts = [
@@ -41,6 +44,7 @@ class Dashboard extends BaseController
             'title' => 'Dashboard Principal',
             'kpis' => $kpis,
             'notifications' => $notifications,
+            'notifCount' => $notifCount,
             'charts' => $charts,
             'userEmail' => session()->get('email') ?? 'usuario@fabrica.com',
             'userName' => session()->get('user_name') ?? 'Usuario',
