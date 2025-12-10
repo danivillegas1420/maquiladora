@@ -852,6 +852,9 @@ class LogisticaController extends BaseController
     public function crearDocumento()
     {
         if (!$this->tableExists('doc_embarque')) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['ok' => false, 'message' => 'La tabla "doc_embarque" no existe.']);
+            }
             return redirect()->back()->with('error', 'La tabla "doc_embarque" no existe.');
         }
 
@@ -903,12 +906,50 @@ class LogisticaController extends BaseController
         }
 
         if (empty($data)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['ok' => false, 'message' => 'No hay columnas válidas para guardar.']);
+            }
             return redirect()->back()->with('error', 'No hay columnas válidas para guardar.');
         }
 
         try {
             $m->insert($data);
+            $documentoId = $m->getInsertID();
+
+            // Obtener folio del embarque si existe
+            $embarqueFolio = '';
+            if (!empty($data['embarqueId'])) {
+                try {
+                    $embarque = $db->table('embarque')->select('folio')->where('id', $data['embarqueId'])->get()->getRowArray();
+                    $embarqueFolio = $embarque['folio'] ?? '';
+                } catch (\Throwable $e) {
+                    // Silencioso
+                }
+            }
+
+            // Si es AJAX, devolver JSON con los datos del documento
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'ok' => true,
+                    'message' => 'Documento creado correctamente',
+                    'documento' => [
+                        'id' => $documentoId,
+                        'tipo' => $data['tipo'] ?? '',
+                        'numero' => $data['numero'] ?? '',
+                        'fecha' => $data['fecha'] ?? '',
+                        'estado' => $data['estado'] ?? '',
+                        'embarqueId' => $data['embarqueId'] ?? 0,
+                        'embarqueFolio' => $embarqueFolio,
+                        'urlPdf' => $data['urlPdf'] ?? '',
+                        'archivoPdf' => $data['archivoPdf'] ?? '',
+                        'archivoRuta' => $data['archivoRuta'] ?? ''
+                    ]
+                ]);
+            }
         } catch (\Throwable $e) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['ok' => false, 'message' => 'No se pudo crear: ' . $e->getMessage()]);
+            }
             return redirect()->back()->with('error', 'No se pudo crear: ' . $e->getMessage());
         }
 
@@ -1449,6 +1490,17 @@ class LogisticaController extends BaseController
                 $previewUrl = site_url('logistica/factura/' . $embarqueId);
                 $pdfUrl = site_url('logistica/factura/' . $embarqueId . '/pdf');
 
+                // Auto-registrar factura en doc_embarque
+                $this->registrarDocumentoEmbarque(
+                    embarqueId: $embarqueId,
+                    tipo: 'Factura',
+                    numero: $serie . '-' . $folio,
+                    urlPdf: $pdfUrl,
+                    archivoPdf: '',
+                    archivoRuta: '',
+                    estado: 'Emitida'
+                );
+
                 return $this->response->setJSON([
                     'ok' => true,
                     'uuid' => $uuid,
@@ -1526,13 +1578,25 @@ class LogisticaController extends BaseController
                 return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'msg' => $msg, 'raw' => $d]);
             }
 
+            // Auto-registrar factura en doc_embarque
+            $pdfUrl = $d['files']['pdf'] ?? '';
+            $this->registrarDocumentoEmbarque(
+                embarqueId: $embarqueId,
+                tipo: 'Factura',
+                numero: ($d['series'] ?? '') . '-' . ($d['number'] ?? ''),
+                urlPdf: $pdfUrl,
+                archivoPdf: '',
+                archivoRuta: '',
+                estado: 'Emitida'
+            );
+
             return $this->response->setJSON([
                 'ok' => true,
                 'uuid' => $d['uuid'] ?? null,
                 'serie' => $d['series'] ?? ($d['series_name'] ?? null),
                 'folio' => $d['number'] ?? null,
                 'total' => $d['total'] ?? null,
-                'pdf_url' => $d['files']['pdf'] ?? null,
+                'pdf_url' => $pdfUrl,
                 'xml_url' => $d['files']['xml'] ?? null,
                 'fecha' => $d['date'] ?? null,
                 'provider' => 'facturapi',
@@ -1541,5 +1605,274 @@ class LogisticaController extends BaseController
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON(['ok' => false, 'msg' => $e->getMessage()]);
         }
+    }
+
+    /* =========================================================
+     *  HELPER: Auto-registro de documentos generados
+     * =======================================================*/
+
+    /**
+     * Registra un documento en la tabla doc_embarque
+     * 
+     * @param int $embarqueId ID del embarque
+     * @param string $tipo Tipo de documento (Factura, Etiqueta, Aduanas, etc.)
+     * @param string $numero Número del documento
+     * @param string $urlPdf URL del PDF generado
+     * @param string $archivoPdf Ruta del archivo PDF en Supabase
+     * @param string $archivoRuta Ruta del archivo PDF local
+     * @param string $estado Estado del documento (Emitida, Borrador, etc.)
+     * @return int|null ID del documento creado/actualizado o null si falla
+     */
+    private function registrarDocumentoEmbarque(
+        int $embarqueId,
+        string $tipo,
+        string $numero = '',
+        string $urlPdf = '',
+        string $archivoPdf = '',
+        string $archivoRuta = '',
+        string $estado = 'Emitida'
+    ): ?int {
+        if (!$this->tableExists('doc_embarque')) {
+            log_message('error', '[Auto-registro] Tabla doc_embarque no existe');
+            return null;
+        }
+
+        try {
+            log_message('info', '[Auto-registro] Iniciando registro de documento: tipo=' . $tipo . ', embarqueId=' . $embarqueId);
+
+            $m = new DocumentoEnvioModel();
+
+            // Buscar si ya existe un documento del mismo tipo para este embarque
+            $existente = $m->where([
+                'embarqueId' => $embarqueId,
+                'tipo' => $tipo
+            ])->first();
+
+            $data = [
+                'embarqueId' => $embarqueId,
+                'tipo' => $tipo,
+                'numero' => $numero ?: $this->generarNumeroDocumento($tipo),
+                'fecha' => date('Y-m-d'),
+                'estado' => $estado,
+                'urlPdf' => $urlPdf,
+                'archivoPdf' => $archivoPdf,
+                'archivoRuta' => $archivoRuta
+            ];
+
+            // Agregar maquiladoraID si existe
+            $session = session();
+            $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
+            if ($maquiladoraId) {
+                try {
+                    $hasMaq = $this->hasCols('doc_embarque', ['maquiladoraID', 'maquiladoraId']);
+                    if ($hasMaq['maquiladoraID'] ?? false) {
+                        $data['maquiladoraID'] = (int) $maquiladoraId;
+                    } elseif ($hasMaq['maquiladoraId'] ?? false) {
+                        $data['maquiladoraId'] = (int) $maquiladoraId;
+                    }
+                } catch (\Throwable $e) {
+                    log_message('warning', '[Auto-registro] Error al verificar columnas maquiladora: ' . $e->getMessage());
+                }
+            }
+
+            if ($existente) {
+                // Actualizar existente
+                log_message('info', '[Auto-registro] Actualizando documento existente ID: ' . $existente['id']);
+                $m->update($existente['id'], $data);
+                return $existente['id'];
+            }
+
+            // Crear nuevo
+            log_message('info', '[Auto-registro] Creando nuevo documento con datos: ' . json_encode($data));
+            $result = $m->insert($data);
+
+            if ($result === false) {
+                $errors = $m->errors();
+                log_message('error', '[Auto-registro] Error al insertar documento: ' . json_encode($errors));
+                return null;
+            }
+
+            $insertId = $m->getInsertID();
+            log_message('info', '[Auto-registro] Documento creado exitosamente con ID: ' . $insertId);
+            return $insertId;
+        } catch (\Throwable $e) {
+            log_message('error', '[Auto-registro] Excepción al registrar documento: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
+            return null;
+        }
+    }
+
+    /**
+     * Genera un número de documento automático
+     */
+    private function generarNumeroDocumento(string $tipo): string
+    {
+        $pref = strtoupper(substr($tipo, 0, 2));
+        return $pref . '-' . date('Y') . '-' . str_pad((string) rand(1, 9999), 4, '0', STR_PAD_LEFT);
+    }
+
+    /* =========================================================
+     *  ALMACENAMIENTO LOCAL DE DOCUMENTOS
+     * =======================================================*/
+
+    /**
+     * Lista PDFs disponibles por tipo de documento
+     * GET /modulo3/documentos/listar-pdfs/{tipo}
+     */
+    public function listarPdfsLocales(string $tipo = '')
+    {
+        $tipoToFolder = [
+            'Factura' => 'facturas',
+            'Packing List' => 'packing_lists',
+            'Etiqueta' => 'etiquetas',
+            'Aduanas' => 'aduanas',
+            'Documento Embarque' => 'documentos_embarque',
+        ];
+
+        $folder = $tipoToFolder[$tipo] ?? null;
+        if (!$folder) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'message' => 'Tipo de documento no válido',
+                'archivos' => []
+            ]);
+        }
+
+        $basePath = WRITEPATH . 'uploads/documentos_embarque/' . $folder;
+
+        // Crear directorio si no existe
+        if (!is_dir($basePath)) {
+            mkdir($basePath, 0755, true);
+        }
+
+        $archivos = [];
+        $files = glob($basePath . '/*.pdf');
+
+        if ($files) {
+            foreach ($files as $file) {
+                $archivos[] = [
+                    'nombre' => basename($file),
+                    'ruta' => 'documentos_embarque/' . $folder . '/' . basename($file),
+                    'url' => site_url('modulo3/documentos/pdf/' . urlencode($folder . '/' . basename($file))),
+                    'tamano' => filesize($file),
+                    'fecha' => date('Y-m-d H:i:s', filemtime($file))
+                ];
+            }
+
+            // Ordenar por fecha descendente
+            usort($archivos, fn($a, $b) => $b['fecha'] <=> $a['fecha']);
+        }
+
+        return $this->response->setJSON([
+            'ok' => true,
+            'archivos' => $archivos
+        ]);
+    }
+
+    /**
+     * Sirve un PDF desde el almacenamiento local
+     * GET /modulo3/documentos/pdf/{ruta}
+     */
+    public function servirPdfLocal(...$rutaParts)
+    {
+        $ruta = implode('/', $rutaParts);
+        $ruta = urldecode($ruta);
+        $fullPath = WRITEPATH . 'uploads/documentos_embarque/' . $ruta;
+
+        // Validar que el archivo existe y está dentro del directorio permitido
+        $realPath = realpath($fullPath);
+        $allowedBase = realpath(WRITEPATH . 'uploads/documentos_embarque');
+
+        if (!$realPath || !$allowedBase || strpos($realPath, $allowedBase) !== 0) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Archivo no encontrado');
+        }
+
+        if (!is_file($realPath)) {
+            throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Archivo no encontrado');
+        }
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader('Content-Disposition', 'inline; filename="' . basename($realPath) . '"')
+            ->setBody(file_get_contents($realPath));
+    }
+
+    /**
+     * Guarda un PDF generado en el almacenamiento local
+     * POST /modulo3/documentos/guardar-pdf-local
+     */
+    public function guardarPdfLocal()
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'ok' => false,
+                'message' => 'Solo peticiones AJAX'
+            ]);
+        }
+
+        $tipo = $this->request->getPost('tipo'); // Factura, Etiqueta, etc.
+        $folio = $this->request->getPost('folio');
+        $embarqueId = (int) $this->request->getPost('embarqueId');
+        $file = $this->request->getFile('file');
+
+        if (!$file || !$file->isValid()) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'message' => 'Archivo no válido'
+            ]);
+        }
+
+        $tipoToFolder = [
+            'Factura' => 'facturas',
+            'Packing List' => 'packing_lists',
+            'Etiqueta' => 'etiquetas',
+            'Aduanas' => 'aduanas',
+            'Documento Embarque' => 'documentos_embarque',
+        ];
+
+        $folder = $tipoToFolder[$tipo] ?? 'documentos_embarque';
+        $basePath = WRITEPATH . 'uploads/documentos_embarque/' . $folder;
+
+        if (!is_dir($basePath)) {
+            mkdir($basePath, 0755, true);
+        }
+
+        // Generar nombre de archivo
+        $filename = ($folio ?: 'DOC-' . time()) . '.pdf';
+        $filename = preg_replace('/[^a-zA-Z0-9\-_\.]/', '_', $filename);
+        $fullPath = $basePath . '/' . $filename;
+
+        // Mover archivo
+        try {
+            $file->move($basePath, $filename);
+        } catch (\Throwable $e) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'message' => 'Error al guardar archivo: ' . $e->getMessage()
+            ]);
+        }
+
+        $rutaRelativa = 'documentos_embarque/' . $folder . '/' . $filename;
+        $url = site_url('modulo3/documentos/pdf/' . urlencode($folder . '/' . $filename));
+
+        // Auto-registrar en doc_embarque si hay embarqueId
+        if ($embarqueId > 0) {
+            $this->registrarDocumentoEmbarque(
+                embarqueId: $embarqueId,
+                tipo: $tipo,
+                numero: $folio,
+                urlPdf: $url,
+                archivoPdf: '',
+                archivoRuta: $rutaRelativa,
+                estado: 'Emitida'
+            );
+        }
+
+        return $this->response->setJSON([
+            'ok' => true,
+            'message' => 'PDF guardado correctamente',
+            'ruta' => $rutaRelativa,
+            'url' => $url,
+            'filename' => $filename
+        ]);
     }
 }

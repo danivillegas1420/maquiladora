@@ -188,7 +188,7 @@ $routes->group('api', static function ($routes) {
 
     // Lectura/detalle
     $routes->get('clientes/(:num)', 'Clientes::json_detalle/$1');
-    
+
     // Obtener clasificaciones de clientes
     $routes->get('clientes/clasificaciones', 'Clientes::getClasificaciones');
     $routes->match(['post', 'options'], 'clientes/clasificaciones/crear', 'Clientes::crearClasificacion');
@@ -577,6 +577,10 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->post('documentos/(:num)/editar', 'LogisticaController::editarDocumento/$1');
     $routes->post('documentos/(:num)/eliminar', 'LogisticaController::eliminarDocumento/$1');
     $routes->get('documentos/(:num)/pdf', 'LogisticaController::descargarPdf/$1');
+    // Almacenamiento local
+    $routes->get('documentos/listar-pdfs/(:any)', 'LogisticaController::listarPdfsLocales/$1');
+    $routes->get('documentos/pdf/(:any)', 'LogisticaController::servirPdfLocal/$1');
+    $routes->post('documentos/guardar-pdf-local', 'LogisticaController::guardarPdfLocal');
 
     /* =========================
      * LOGÍSTICA · DOCUMENTO MANUAL (sin BD)
@@ -803,6 +807,6 @@ $routes->group('modulo1/pagos', ['filter' => 'auth:Administrador,Jefe,RH'], stat
 });
 
 // Ruta temporal para probar íconos
-$routes->get('test-icons', function() {
+$routes->get('test-icons', function () {
     return view('layouts/test');
 });

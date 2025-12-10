@@ -6,12 +6,21 @@ use CodeIgniter\Model;
 
 class DocumentoEnvioModel extends Model
 {
-    protected $table         = 'doc_embarque';
-    protected $primaryKey    = 'id';
-    protected $returnType    = 'array';
+    protected $table = 'doc_embarque';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
     protected $useTimestamps = false;
     protected $protectFields = true;
     protected $allowedFields = [
-        'embarqueId','tipo','archivoRuta','numero','fecha','estado','urlPdf','archivoPdf','maquiladoraID'
+        'embarqueId',
+        'tipo',
+        'archivoRuta',
+        'numero',
+        'fecha',
+        'estado',
+        'urlPdf',
+        'archivoPdf',
+        'maquiladoraID',
+        'maquiladoraId'
     ];
 }

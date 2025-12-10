@@ -135,7 +135,7 @@ class EtiquetaEmbarqueController extends BaseController
             $builder->join('cliente c', 'c.id = e.id_cliente', 'left');
         }
 
-        $destinoExpr   = "''";
+        $destinoExpr = "''";
         $clienteNombre = "''";
 
         if ($joinCliente && $this->tableExists('cliente')) {
@@ -173,7 +173,7 @@ class EtiquetaEmbarqueController extends BaseController
         }
 
         $select .= ', ' . $clienteNombre . ' AS clienteNombre';
-        $select .= ', ' . $destinoExpr   . ' AS destino';
+        $select .= ', ' . $destinoExpr . ' AS destino';
 
         $embarque = $builder->select($select)->get()->getRowArray();
 
@@ -183,7 +183,7 @@ class EtiquetaEmbarqueController extends BaseController
 
         // ----- Etiqueta (si existe) -----
         $etiqueta = null;
-        $tablaEt  = $this->etiquetaTableName();
+        $tablaEt = $this->etiquetaTableName();
         if ($tablaEt) {
             $etiqueta = $db->table($tablaEt)
                 ->where('embarqueId', $embarqueId)
@@ -205,7 +205,7 @@ class EtiquetaEmbarqueController extends BaseController
     public function show($embarqueId)
     {
         $embarqueId = (int) $embarqueId;
-        $data       = $this->cargarDatos($embarqueId);
+        $data = $this->cargarDatos($embarqueId);
 
         return view('modulos/embarque_etiqueta', $data);
     }
@@ -217,23 +217,23 @@ class EtiquetaEmbarqueController extends BaseController
     {
         $embarqueId = (int) $embarqueId;
 
-        $db       = $this->db();
-        $tablaEt  = $this->etiquetaTableOrFail();
-        $builder  = $db->table($tablaEt);
+        $db = $this->db();
+        $tablaEt = $this->etiquetaTableOrFail();
+        $builder = $db->table($tablaEt);
 
         $id = (int) ($this->request->getPost('id') ?? 0);
 
         $payload = [
-            'embarqueId'        => $embarqueId,
-            'codigo'            => trim((string) $this->request->getPost('codigo')),
-            'ship_to_nombre'    => trim((string) $this->request->getPost('ship_to_nombre')),
+            'embarqueId' => $embarqueId,
+            'codigo' => trim((string) $this->request->getPost('codigo')),
+            'ship_to_nombre' => trim((string) $this->request->getPost('ship_to_nombre')),
             'ship_to_direccion' => trim((string) $this->request->getPost('ship_to_direccion')),
-            'ship_to_ciudad'    => trim((string) $this->request->getPost('ship_to_ciudad')),
-            'ship_to_pais'      => trim((string) $this->request->getPost('ship_to_pais')),
-            'referencia'        => trim((string) $this->request->getPost('referencia')),
-            'bultos'            => $this->request->getPost('bultos')      !== '' ? (int) $this->request->getPost('bultos')      : null,
-            'peso_bruto'        => $this->request->getPost('peso_bruto')  !== '' ? (float) $this->request->getPost('peso_bruto')  : null,
-            'peso_neto'         => $this->request->getPost('peso_neto')   !== '' ? (float) $this->request->getPost('peso_neto')   : null,
+            'ship_to_ciudad' => trim((string) $this->request->getPost('ship_to_ciudad')),
+            'ship_to_pais' => trim((string) $this->request->getPost('ship_to_pais')),
+            'referencia' => trim((string) $this->request->getPost('referencia')),
+            'bultos' => $this->request->getPost('bultos') !== '' ? (int) $this->request->getPost('bultos') : null,
+            'peso_bruto' => $this->request->getPost('peso_bruto') !== '' ? (float) $this->request->getPost('peso_bruto') : null,
+            'peso_neto' => $this->request->getPost('peso_neto') !== '' ? (float) $this->request->getPost('peso_neto') : null,
         ];
 
         // Columnas reales de la tabla
@@ -244,7 +244,7 @@ class EtiquetaEmbarqueController extends BaseController
         }
 
         // maquiladoraID si existe en la tabla
-        $session       = session();
+        $session = session();
         $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID') ?? null;
         if ($maquiladoraId && isset($cols['maquiladoraID'])) {
             $payload['maquiladoraID'] = (int) $maquiladoraId;
@@ -308,9 +308,9 @@ class EtiquetaEmbarqueController extends BaseController
     {
         $id = (int) $id;
 
-        $db      = $this->db();
+        $db = $this->db();
         $tablaEt = $this->etiquetaTableOrFail();
-        $tabla   = $db->table($tablaEt);
+        $tabla = $db->table($tablaEt);
 
         $row = $tabla->where('id', $id)->get()->getRowArray();
         $embarqueId = (int) ($row['embarqueId'] ?? 0);
@@ -362,7 +362,7 @@ class EtiquetaEmbarqueController extends BaseController
      */
     private function generarPdfYDocumento(int $embarqueId, int $etiquetaId): string
     {
-        $db   = $this->db();
+        $db = $this->db();
         $data = $this->cargarDatos($embarqueId);
 
         // Asegurar que la etiqueta cargada sea la correcta
@@ -395,18 +395,22 @@ class EtiquetaEmbarqueController extends BaseController
 
         $output = $dompdf->output();
 
-        $dir = WRITEPATH . 'uploads/pdfs/';
+        // Usar estructura estándar de almacenamiento local
+        $dir = WRITEPATH . 'uploads/documentos_embarque/etiquetas/';
         if (!is_dir($dir)) {
             mkdir($dir, 0775, true);
         }
 
-        $fileName = 'etiqueta_embarque_' . $embarqueId . '_' . date('Ymd_His') . '.pdf';
+        $fileName = 'etiqueta_' . $embarqueId . '_' . date('Ymd_His') . '.pdf';
         $filePath = $dir . $fileName;
 
         file_put_contents($filePath, $output);
 
-        // Ruta relativa que usará doc_embarque (uploads/pdfs/...)
-        $relativePath = 'pdfs/' . $fileName;
+        // Ruta relativa para doc_embarque
+        $relativePath = 'documentos_embarque/etiquetas/' . $fileName;
+
+        // URL para acceder al PDF
+        $pdfUrl = site_url('modulo3/documentos/pdf/' . urlencode('etiquetas/' . $fileName));
 
         // ----- Registrar en doc_embarque -----
         if ($this->tableExists('doc_embarque')) {
@@ -419,17 +423,18 @@ class EtiquetaEmbarqueController extends BaseController
             $numero = $etiqueta['codigo'] ?? ('ETQ-' . ($embarque['folio'] ?? $embarqueId));
 
             $docData = [
-                'embarqueId'  => $embarqueId,
-                'tipo'        => 'Etiqueta',
-                'numero'      => $numero,
-                'fecha'       => date('Y-m-d'),
-                'estado'      => 'generado',
+                'embarqueId' => $embarqueId,
+                'tipo' => 'Etiqueta',
+                'numero' => $numero,
+                'fecha' => date('Y-m-d'),
+                'estado' => 'Emitida',
                 'archivoRuta' => $relativePath,
-                'archivoPdf'  => $relativePath,
+                'urlPdf' => $pdfUrl,
+                'archivoPdf' => '',
             ];
 
             // Maquiladora si aplica
-            $session       = session();
+            $session = session();
             $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID') ?? null;
             if ($maquiladoraId) {
                 if (isset($cols['maquiladoraID'])) {
