@@ -455,6 +455,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->group('control-bultos', function ($routes) {
         $routes->get('/', 'ControlBultosController::index');
         $routes->get('(:num)', 'ControlBultosController::detalle/$1');
+        $routes->get('(:num)/matriz', 'ControlBultosController::vistaMatriz/$1');
         // Editor de Plantillas
         $routes->get('plantillas/editor/(:num)', 'ControlBultosController::editorPlantilla/$1');
         $routes->get('plantillas/nueva', 'ControlBultosController::nuevaPlantilla');
@@ -486,6 +487,8 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         $routes->post('(:num)/editar', 'ControlBultosController::editar/$1');
         $routes->delete('(:num)/eliminar', 'ControlBultosController::eliminar/$1');
         $routes->post('registrar-produccion', 'ControlBultosController::registrarProduccion');
+        $routes->post('registrar-produccion-matriz', 'ControlBultosController::registrarProduccionMatriz');
+        $routes->post('crear-bultos-auto', 'ControlBultosController::crearBultosAuto');
         $routes->get('(:num)/registros-produccion', 'ControlBultosController::registrosProduccion/$1');
         $routes->get('(:num)/export-excel', 'ControlBultosController::exportExcel/$1');
     });

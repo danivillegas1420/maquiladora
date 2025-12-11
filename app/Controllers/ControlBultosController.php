@@ -12,6 +12,13 @@ use App\Models\RegistroProduccionModel;
 
 class ControlBultosController extends BaseController
 {
+    protected $db;
+
+    public function __construct()
+    {
+        $this->db = \Config\Database::connect();
+    }
+
     /**
      * Vista principal
      */
@@ -20,7 +27,7 @@ class ControlBultosController extends BaseController
         if (!can('menu.inspeccion')) {
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
-        
+
         $session = session();
         $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
         // Usar el mismo key que auth_helper (user_id) como prioridad, con compatibilidad hacia atrás
@@ -61,7 +68,7 @@ class ControlBultosController extends BaseController
         if (!can('menu.inspeccion')) {
             return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $session = session();
         $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
 
@@ -82,7 +89,7 @@ class ControlBultosController extends BaseController
         if (!can('menu.inspeccion')) {
             return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $controlModel = new ControlBultosModel();
         $control = $controlModel->getDetallado($id);
 
@@ -107,7 +114,7 @@ class ControlBultosController extends BaseController
         if (!can('menu.inspeccion')) {
             return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $controlModel = new ControlBultosModel();
         $operacionModel = new OperacionControlModel();
 
@@ -147,7 +154,7 @@ class ControlBultosController extends BaseController
         if (!can('menu.inspeccion')) {
             return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $session = session();
         $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
         $usuarioId = $session->get('usuario_id') ?? $session->get('id');
@@ -210,7 +217,7 @@ class ControlBultosController extends BaseController
         if (!can('menu.inspeccion')) {
             return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $controlModel = new ControlBultosModel();
 
         $data = [
@@ -240,7 +247,7 @@ class ControlBultosController extends BaseController
         if (!can('menu.inspeccion')) {
             return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
         }
-        
+
         $controlModel = new ControlBultosModel();
 
         if ($controlModel->delete($id)) {
@@ -509,4 +516,243 @@ class ControlBultosController extends BaseController
 
         return $this->response->setJSON(['ok' => true, 'message' => 'Plantilla guardada correctamente']);
     }
+
+    /**
+     * Vista de Matriz
+     */
+    public function vistaMatriz($id)
+    {
+        if (!can('menu.inspeccion')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+
+        $session = session();
+        $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
+
+        $controlModel = new ControlBultosModel();
+        $progresoModel = new \App\Models\ProgresoBultoOperacionModel();
+        $empleadoModel = new EmpleadoModel();
+
+        $control = $controlModel->getDetallado($id);
+
+        if (!$control) {
+            return redirect()->back()->with('error', 'Control no encontrado');
+        }
+
+        $matriz = $progresoModel->getMatrizProgreso($id);
+        $progresoOperaciones = $progresoModel->getProgresoPorOperacion($id);
+
+        // Obtener empleados activos
+        $usuarioId = $session->get('usuario_id') ?? $session->get('user_id') ?? $session->get('id');
+        $empleadoActual = null;
+        if ($usuarioId) {
+            $empleadoActual = $empleadoModel
+                ->where('idusuario', (int) $usuarioId)
+                ->where('activo', 1)
+                ->first();
+        }
+
+        // Organizar datos para la vista
+        $bultos = [];
+        $operaciones = [];
+
+        foreach ($matriz as $row) {
+            // Agregar bulto si no existe
+            if (!isset($bultos[$row['bultoId']])) {
+                $bultos[$row['bultoId']] = [
+                    'id' => $row['bultoId'],
+                    'numero_bulto' => $row['numero_bulto'],
+                    'talla' => $row['talla'],
+                    'cantidad' => $row['cantidad'],
+                    'operaciones' => []
+                ];
+            }
+
+            // Agregar operación si no existe
+            if (!isset($operaciones[$row['operacionId']])) {
+                $operaciones[$row['operacionId']] = [
+                    'id' => $row['operacionId'],
+                    'nombre' => $row['nombre_operacion'],
+                    'orden' => $row['operacion_orden']
+                ];
+            }
+
+            // Agregar progreso de esta operación para este bulto
+            $bultos[$row['bultoId']]['operaciones'][$row['operacionId']] = [
+                'completado' => $row['completado'],
+                'cantidad_completada' => $row['cantidad_completada'],
+                'empleadoId' => $row['empleadoId'],
+                'fecha_completado' => $row['fecha_completado']
+            ];
+        }
+
+        // Ordenar operaciones por orden
+        usort($operaciones, function ($a, $b) {
+            return $a['orden'] <=> $b['orden'];
+        });
+
+        $data = [
+            'control' => $control,
+            'bultos' => array_values($bultos),
+            'operaciones' => $operaciones,
+            'progresoOperaciones' => $progresoOperaciones,
+            'empleados' => $empleadoModel->getEmpleadosActivos(),
+            'empleadoActual' => $empleadoActual
+        ];
+
+        return view('modulos/control_bultos_matriz', $data);
+    }
+
+    /**
+     * API: Registrar producción desde matriz (con bulto específico)
+     */
+    public function registrarProduccionMatriz()
+    {
+        $session = session();
+        $usuarioId = $session->get('usuario_id') ?? $session->get('id');
+
+        $bultoId = $this->request->getPost('bultoId');
+        $operacionControlId = $this->request->getPost('operacionControlId');
+        $empleadoId = $this->request->getPost('empleadoId');
+        $cantidadProducida = $this->request->getPost('cantidad_producida');
+        $fechaRegistro = $this->request->getPost('fecha_registro') ?? date('Y-m-d');
+        $horaInicio = $this->request->getPost('hora_inicio');
+        $horaFin = $this->request->getPost('hora_fin');
+        $observaciones = $this->request->getPost('observaciones');
+
+        // Validaciones
+        if (empty($operacionControlId) || empty($empleadoId) || empty($cantidadProducida)) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'message' => 'Operación, empleado y cantidad son requeridos'
+            ]);
+        }
+
+        // Registrar en la tabla de registros_produccion (sistema existente)
+        $registroModel = new RegistroProduccionModel();
+        $dataRegistro = [
+            'operacionControlId' => $operacionControlId,
+            'empleadoId' => $empleadoId,
+            'cantidad_producida' => $cantidadProducida,
+            'fecha_registro' => $fechaRegistro,
+            'hora_inicio' => $horaInicio,
+            'hora_fin' => $horaFin,
+            'observaciones' => $observaciones,
+            'registrado_por' => $usuarioId,
+        ];
+
+        $resultado = $registroModel->registrarProduccion($dataRegistro);
+
+        if (is_array($resultado) && isset($resultado['ok']) && $resultado['ok']) {
+            // Marcar el bulto específico como completado
+            if ($bultoId) {
+                $progresoModel = new \App\Models\ProgresoBultoOperacionModel();
+                $progresoModel->marcarCompletado($bultoId, $operacionControlId, $empleadoId, $cantidadProducida);
+            }
+
+            // Actualizar estado del control
+            $operacionModel = new OperacionControlModel();
+            $operacion = $operacionModel->find($operacionControlId);
+
+            if ($operacion) {
+                $controlModel = new ControlBultosModel();
+                $nuevoEstado = $controlModel->actualizarEstado($operacion['controlBultoId']);
+
+                return $this->response->setJSON([
+                    'ok' => true,
+                    'message' => 'Producción registrada correctamente',
+                    'id' => $resultado['id'],
+                    'nuevo_estado' => $nuevoEstado
+                ]);
+            }
+        }
+
+        return $this->response->setJSON([
+            'ok' => false,
+            'message' => 'No se pudo registrar la producción',
+            'debug' => $resultado
+        ]);
+    }
+
+    /**
+     * API: Crear bultos automáticamente
+     */
+    public function crearBultosAuto()
+    {
+        if (!can('menu.inspeccion')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+
+        $controlBultoId = $this->request->getPost('controlBultoId');
+        $numeroBultos = (int) $this->request->getPost('numeroBultos');
+        $talla = $this->request->getPost('talla') ?? 'M';
+
+        if (empty($controlBultoId) || $numeroBultos < 1) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'message' => 'Datos inválidos'
+            ]);
+        }
+
+        // Obtener el control
+        $controlModel = new ControlBultosModel();
+        $control = $controlModel->find($controlBultoId);
+
+        if (!$control) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'message' => 'Control no encontrado'
+            ]);
+        }
+
+        // Verificar si ya existen bultos
+        $bultosExistentes = $this->db->table('bultos')
+            ->where('controlBultoId', $controlBultoId)
+            ->countAllResults();
+
+        if ($bultosExistentes > 0) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'message' => 'Ya existen bultos para este control. Elimínalos primero si deseas recrearlos.'
+            ]);
+        }
+
+        // Calcular cantidad por bulto
+        $cantidadTotal = $control['cantidad_total'];
+        $cantidadPorBulto = (int) ceil($cantidadTotal / $numeroBultos);
+
+        // Crear bultos
+        $this->db->transStart();
+
+        for ($i = 1; $i <= $numeroBultos; $i++) {
+            // Calcular cantidad para este bulto (el último puede tener menos)
+            $cantidadRestante = $cantidadTotal - (($i - 1) * $cantidadPorBulto);
+            $cantidadBulto = min($cantidadPorBulto, $cantidadRestante);
+
+            $this->db->table('bultos')->insert([
+                'controlBultoId' => $controlBultoId,
+                'numero_bulto' => str_pad($i, 3, '0', STR_PAD_LEFT),
+                'talla' => $talla,
+                'cantidad' => $cantidadBulto,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ]);
+        }
+
+        $this->db->transComplete();
+
+        if ($this->db->transStatus()) {
+            return $this->response->setJSON([
+                'ok' => true,
+                'message' => "Se crearon $numeroBultos bultos correctamente"
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'ok' => false,
+            'message' => 'Error al crear los bultos'
+        ]);
+    }
 }
+
+

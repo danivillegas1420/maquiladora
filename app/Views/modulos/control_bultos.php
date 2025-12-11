@@ -376,7 +376,8 @@
                                 <input type="hidden" name="operaciones" id="inputOperacionesJson">
 
                                 <div class="col-12 text-end">
-                                    <button type="submit" class="btn btn-primary" id="btnGuardarPlantilla">Guardar Plantilla</button>
+                                    <button type="submit" class="btn btn-primary" id="btnGuardarPlantilla">Guardar
+                                        Plantilla</button>
                                 </div>
                             </div>
                         </form>
@@ -445,6 +446,7 @@
                     render: function (data) {
                         return `
                             <button class="btn btn-sm btn-info text-white btn-ver" data-id="${data.id}" title="Ver Detalles"><i class="fas fa-eye"></i></button>
+                            <a href="<?= base_url('modulo3/control-bultos') ?>/${data.id}/matriz" class="btn btn-sm btn-success" title="Vista Matriz"><i class="fas fa-th"></i></a>
                             <button class="btn btn-sm btn-warning text-white btn-editar" data-id="${data.id}" title="Editar"><i class="fas fa-edit"></i></button>
                             <button class="btn btn-sm btn-danger btn-eliminar" data-id="${data.id}" title="Eliminar"><i class="fas fa-trash"></i></button>
                         `;
