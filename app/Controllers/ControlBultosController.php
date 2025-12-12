@@ -379,6 +379,98 @@ class ControlBultosController extends BaseController
                 }
             }
 
+            // Progreso por talla (solo si hay múltiples tallas)
+            $progresoPorTalla = [];
+            if (count($tallasControl) > 1) {
+                $totalCantidadTallas = 0;
+                foreach ($tallasControl as $t) {
+                    $totalCantidadTallas += (int) ($t['cantidad'] ?? 0);
+                }
+
+                $bultosExistentes = (int) $this->db->table('bultos')
+                    ->where('controlBultoId', $id)
+                    ->countAllResults();
+
+                // completadas reales por talla/operación desde matriz (si existen bultos)
+                $completadasPorTallaOperacion = [];
+                if ($bultosExistentes > 0) {
+                    try {
+                        $rows = $this->db->query(
+                            "SELECT b.talla, oc.id as operacionId, SUM(COALESCE(pbo.cantidad_completada, 0)) as completadas\n" .
+                            "FROM bultos b\n" .
+                            "CROSS JOIN operaciones_control oc\n" .
+                            "LEFT JOIN progreso_bulto_operacion pbo ON pbo.bultoId = b.id AND pbo.operacionControlId = oc.id\n" .
+                            "WHERE b.controlBultoId = ? AND oc.controlBultoId = ?\n" .
+                            "GROUP BY b.talla, oc.id\n" .
+                            "ORDER BY b.talla ASC, oc.orden ASC",
+                            [$id, $id]
+                        )->getResultArray();
+
+                        foreach ($rows as $r) {
+                            $tallaKey = (string) ($r['talla'] ?? '');
+                            $opKey = (string) ($r['operacionId'] ?? '');
+                            if ($tallaKey === '' || $opKey === '') {
+                                continue;
+                            }
+                            $completadasPorTallaOperacion[$tallaKey][$opKey] = (int) ($r['completadas'] ?? 0);
+                        }
+                    } catch (\Throwable $e) {
+                        $completadasPorTallaOperacion = [];
+                    }
+                }
+
+                foreach ($tallasControl as $t) {
+                    $nombreSexo = (string) ($t['nombre_sexo'] ?? '');
+                    $nombreTalla = (string) ($t['nombre_talla'] ?? '');
+                    $cantidadTalla = (int) ($t['cantidad'] ?? 0);
+
+                    $titulo = trim($nombreSexo . ' ' . $nombreTalla);
+                    if ($titulo === '') {
+                        $titulo = 'Talla';
+                    }
+
+                    // bultos.talla normalmente es VARCHAR; intentamos matchear con nombre_talla
+                    $tallaKey = $nombreTalla;
+
+                    $ops = [];
+                    foreach ($operaciones as $op) {
+                        $opId = (int) ($op['id'] ?? 0);
+                        $piezasReqTotal = (int) ($op['piezas_requeridas'] ?? 0);
+                        $piezasReqTalla = $totalCantidadTallas > 0
+                            ? (int) round(($piezasReqTotal * $cantidadTalla) / $totalCantidadTallas)
+                            : $piezasReqTotal;
+
+                        $completadasReal = (int) ($completadasPorTallaOperacion[$tallaKey][(string) $opId] ?? 0);
+
+                        // Fallback: prorratear del total completado
+                        if ($bultosExistentes === 0 || $completadasReal === 0) {
+                            $piezasCompTotal = (int) ($op['piezas_completadas'] ?? 0);
+                            $completadasReal = $totalCantidadTallas > 0
+                                ? (int) round(($piezasCompTotal * $cantidadTalla) / $totalCantidadTallas)
+                                : $piezasCompTotal;
+                        }
+
+                        $completadasReal = max(0, min($piezasReqTalla, $completadasReal));
+                        $porcentaje = $piezasReqTalla > 0 ? round(($completadasReal / $piezasReqTalla) * 100, 2) : 0;
+
+                        $ops[] = [
+                            'id' => $opId,
+                            'nombre_operacion' => $op['nombre_operacion'] ?? '',
+                            'es_componente' => $op['es_componente'] ?? 1,
+                            'piezas_requeridas' => $piezasReqTalla,
+                            'piezas_completadas' => $completadasReal,
+                            'porcentaje_completado' => $porcentaje,
+                        ];
+                    }
+
+                    $progresoPorTalla[] = [
+                        'titulo' => $titulo,
+                        'cantidad' => $cantidadTalla,
+                        'operaciones' => $ops,
+                    ];
+                }
+            }
+
             return $this->response->setJSON([
                 'ok' => true,
                 'data' => [
@@ -389,7 +481,8 @@ class ControlBultosController extends BaseController
                     'operaciones' => $operaciones,
                     'empleados' => $empleadosAsignados,
                     'tallas' => $tallasControl,
-                    'con_tallas' => count($tallasControl) > 1 ? 1 : 0
+                    'con_tallas' => count($tallasControl) > 1 ? 1 : 0,
+                    'progreso_por_talla' => $progresoPorTalla
                 ]
             ]);
         } catch (\Exception $e) {
@@ -683,6 +776,27 @@ class ControlBultosController extends BaseController
         return $this->response->setJSON([
             'ok' => true,
             'data' => $registros
+        ]);
+    }
+
+    public function resumenProduccionOperacion($operacionId)
+    {
+        if (!can('menu.inspeccion')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+
+        $registroModel = new RegistroProduccionModel();
+        $resumen = $registroModel->getResumenPorOperacion($operacionId);
+
+        $total = 0;
+        foreach ($resumen as $row) {
+            $total += (int) ($row['total_cantidad'] ?? 0);
+        }
+
+        return $this->response->setJSON([
+            'ok' => true,
+            'data' => $resumen,
+            'total' => $total
         ]);
     }
 

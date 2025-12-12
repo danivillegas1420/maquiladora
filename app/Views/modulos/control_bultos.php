@@ -44,6 +44,11 @@
     #tablaEmpleadosCantidad th:first-child {
         text-align: center;
     }
+
+    #tablaEmpleadosCantidad th:nth-child(4),
+    #tablaEmpleadosCantidad td:nth-child(4) {
+        display: none;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -255,6 +260,7 @@
                                             <input type="checkbox" id="selectAllEmpleados" title="Seleccionar todos">
                                         </th>
                                         <th>Empleado</th>
+                                        <th style="width: 120px;">Registrado</th>
                                         <th style="width: 120px;">Cantidad</th>
                                         <th style="width: 100px;">Puesto</th>
                                     </tr>
@@ -477,7 +483,7 @@
             const empleadosAMostrar = empleadosOrden.length > 0 ? empleadosOrden : empleados;
             
             if (empleadosAMostrar.length === 0) {
-                tbody.html('<tr><td colspan="4" class="text-center text-muted">No hay empleados disponibles</td></tr>');
+                tbody.html('<tr><td colspan="5" class="text-center text-muted">No hay empleados disponibles</td></tr>');
                 return;
             }
             
@@ -489,6 +495,9 @@
                                    data-empleado-id="${empleado.id}" data-empleado-nombre="${empleado.nombre} ${empleado.apellido}">
                         </td>
                         <td>${empleado.nombre} ${empleado.apellido}</td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary registrado-actual" data-empleado-id="${empleado.id}">0</span>
+                        </td>
                         <td>
                             <input type="number" class="form-control form-control-sm cantidad-input" 
                                    min="0" placeholder="0" disabled
@@ -502,8 +511,49 @@
             
             // Actualizar total
             actualizarTotalCantidad();
+
+            // Aplicar marcación guardada (si existe)
+            aplicarMarcacionGuardada();
+
+            // Si ya hay operación seleccionada, cargar resumen para mostrar lo ya registrado
+            const opId = $('#regOperacion').val();
+            if (opId) {
+                cargarResumenProduccionOperacion(opId);
+            }
         }
 
+        function limpiarResumenRegistrado() {
+            $('.registrado-actual').text('0').removeClass('bg-success').addClass('bg-secondary');
+        }
+
+        function cargarResumenProduccionOperacion(operacionId) {
+            limpiarResumenRegistrado();
+
+            $.ajax({
+                url: `<?= base_url('modulo3/api/control-bultos/operacion') ?>/${operacionId}/resumen-produccion`,
+                type: 'GET',
+                success: function (response) {
+                    if (!response || !response.ok) {
+                        return;
+                    }
+
+                    const resumen = Array.isArray(response.data) ? response.data : [];
+
+                    resumen.forEach(item => {
+                        const empleadoId = String(item.empleadoId);
+                        const total = parseInt(item.total_cantidad || 0) || 0;
+                        const badge = $(`.registrado-actual[data-empleado-id="${empleadoId}"]`);
+                        if (badge.length) {
+                            badge.text(total);
+                            if (total > 0) {
+                                badge.removeClass('bg-secondary').addClass('bg-success');
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        
         // Función para actualizar el total de cantidades
         function actualizarTotalCantidad() {
             let total = 0;
@@ -526,6 +576,16 @@
             }
             
             actualizarTotalCantidad();
+
+            // Guardar/actualizar marcación persistente
+            const currentIds = new Set(getMarcacionEmpleadoIds());
+            const strId = String(empleadoId);
+            if (isChecked) {
+                currentIds.add(strId);
+            } else {
+                currentIds.delete(strId);
+            }
+            setMarcacionEmpleadoIds(Array.from(currentIds));
         });
 
         $(document).on('input', '.cantidad-input', function() {
@@ -537,6 +597,62 @@
             const isChecked = $(this).is(':checked');
             $('.empleado-checkbox').prop('checked', isChecked).trigger('change');
         });
+
+        // Al cambiar la operación, refrescar los registros ya capturados por empleado
+        $(document).on('change', '#regOperacion', function() {
+            const opId = $(this).val();
+            if (opId) {
+                cargarResumenProduccionOperacion(opId);
+            } else {
+                limpiarResumenRegistrado();
+            }
+
+            // Al cambiar operación, reaplicar marcación guardada para esa operación
+            aplicarMarcacionGuardada();
+        });
+
+        // Función para obtener la clave de marcación
+        function getMarcacionKey() {
+            const controlId = $('#regControlId').val() || '';
+            const operacionId = $('#regOperacion').val() || '';
+            return `control_bultos_marcacion:${controlId}:${operacionId}`;
+        }
+
+        // Función para obtener los IDs de empleados marcados
+        function getMarcacionEmpleadoIds() {
+            const key = getMarcacionKey();
+            try {
+                const raw = localStorage.getItem(key);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed.map(String) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // Función para establecer los IDs de empleados marcados
+        function setMarcacionEmpleadoIds(ids) {
+            const key = getMarcacionKey();
+            try {
+                localStorage.setItem(key, JSON.stringify(ids));
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        // Función para aplicar la marcación guardada
+        function aplicarMarcacionGuardada() {
+            const ids = new Set(getMarcacionEmpleadoIds());
+            $('.empleado-checkbox').each(function () {
+                const empleadoId = String($(this).data('empleado-id'));
+                if (ids.has(empleadoId)) {
+                    $(this).prop('checked', true);
+                }
+            });
+
+            // Disparar change para que habilite/deshabilite inputs y recalcule total
+            $('.empleado-checkbox').trigger('change');
+        }
 
         // Inicializar DataTable
         const tabla = $('#tablaControles').DataTable({
@@ -897,34 +1013,71 @@
                         // Cargar operaciones en la tabla
                         const tbodyOperaciones = $('#tablaOperaciones tbody');
                         tbodyOperaciones.empty();
-                        
-                        data.operaciones.forEach(op => {
-                            const progreso = op.porcentaje_completado || 0;
-                            const completado = parseFloat(progreso) >= 100;
-                            const disabledAttr = completado ? 'disabled' : '';
-                            
-                            const row = `
-                                <tr>
-                                    <td>${op.nombre_operacion}</td>
-                                    <td>${op.es_componente == 1 ? '<span class="badge bg-info">Componente</span>' : '<span class="badge bg-primary">Armado</span>'}</td>
-                                    <td>${op.piezas_requeridas || 0}</td>
-                                    <td>${op.piezas_completadas || 0}</td>
-                                    <td>
-                                        <div class="progress">
-                                            <div class="progress-bar" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-success btn-op-registrar" 
-                                                data-id="${op.id}" ${disabledAttr} 
-                                                title="Registrar producción para esta operación">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `;
-                            tbodyOperaciones.append(row);
-                        });
+
+                        if (data.con_tallas && Array.isArray(data.progreso_por_talla) && data.progreso_por_talla.length > 0) {
+                            data.progreso_por_talla.forEach(grupo => {
+                                const titulo = grupo.titulo || 'Talla';
+                                const cantidadTalla = parseInt(grupo.cantidad || 0) || 0;
+
+                                tbodyOperaciones.append(`
+                                    <tr class="table-secondary">
+                                        <td colspan="6"><strong>${titulo}</strong> &nbsp; <span class="text-muted">(Cantidad: ${cantidadTalla})</span></td>
+                                    </tr>
+                                `);
+
+                                const ops = Array.isArray(grupo.operaciones) ? grupo.operaciones : [];
+                                ops.forEach(op => {
+                                    const progreso = op.porcentaje_completado || 0;
+                                    const row = `
+                                        <tr>
+                                            <td>${op.nombre_operacion}</td>
+                                            <td>${op.es_componente == 1 ? '<span class="badge bg-info">Componente</span>' : '<span class="badge bg-primary">Armado</span>'}</td>
+                                            <td>${op.piezas_requeridas || 0}</td>
+                                            <td>${op.piezas_completadas || 0}</td>
+                                            <td>
+                                                <div class="progress">
+                                                    <div class="progress-bar" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-outline-success btn-op-registrar" 
+                                                        data-id="${op.id}"
+                                                        title="Registrar producción para esta operación">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                    tbodyOperaciones.append(row);
+                                });
+                            });
+                        } else {
+                            data.operaciones.forEach(op => {
+                                const progreso = op.porcentaje_completado || 0;
+
+                                const row = `
+                                    <tr>
+                                        <td>${op.nombre_operacion}</td>
+                                        <td>${op.es_componente == 1 ? '<span class="badge bg-info">Componente</span>' : '<span class="badge bg-primary">Armado</span>'}</td>
+                                        <td>${op.piezas_requeridas || 0}</td>
+                                        <td>${op.piezas_completadas || 0}</td>
+                                        <td>
+                                            <div class="progress">
+                                                <div class="progress-bar" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-success btn-op-registrar" 
+                                                    data-id="${op.id}"
+                                                    title="Registrar producción para esta operación">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                                tbodyOperaciones.append(row);
+                            });
+                        }
                         
                         // Poblar select de operaciones (solo operaciones no completadas)
                         const selectOperacion = $('#regOperacion');

@@ -105,6 +105,18 @@ class RegistroProduccionModel extends Model
             ->getResultArray();
     }
 
+    public function getResumenPorOperacion($operacionId)
+    {
+        return $this->db->table($this->table . ' rp')
+            ->select('rp.empleadoId, e.nombre as empleadoNombre, e.apellido as empleadoApellido, SUM(rp.cantidad_producida) as total_cantidad')
+            ->join('empleado e', 'e.id = rp.empleadoId', 'left')
+            ->where('rp.operacionControlId', $operacionId)
+            ->groupBy('rp.empleadoId, e.nombre, e.apellido')
+            ->orderBy('total_cantidad', 'DESC')
+            ->get()
+            ->getResultArray();
+    }
+
     /**
      * Obtener registros de un control de bultos
      */
