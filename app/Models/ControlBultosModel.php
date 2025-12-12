@@ -104,10 +104,23 @@ class ControlBultosModel extends Model
             'estilo' => $data['estilo'],
             'orden' => $data['orden'],
             'cantidad_total' => $data['cantidad_total'],
+            'con_tallas' => $data['con_tallas'] ?? 0,
             'estado' => 'en_proceso',
             'fecha_creacion' => date('Y-m-d H:i:s'),
             'usuario_creacion' => $data['usuario_creacion'] ?? null,
         ]);
+
+        // Guardar tallas si es control con tallas
+        if (!empty($data['con_tallas']) && !empty($data['tallas'])) {
+            foreach ($data['tallas'] as $talla) {
+                $this->db->table('control_bultos_tallas')->insert([
+                    'control_bulto_id' => $controlId,
+                    'id_talla' => $talla['id_talla'],
+                    'cantidad' => $talla['cantidad'],
+                    'creado_en' => date('Y-m-d H:i:s')
+                ]);
+            }
+        }
 
         // Si hay plantilla, crear operaciones
         if (!empty($data['plantillaId'])) {

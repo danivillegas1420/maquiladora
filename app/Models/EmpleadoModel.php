@@ -174,6 +174,37 @@ class EmpleadoModel extends Model
     }
 
     /**
+     * Obtiene empleados asignados a una orden de producción específica
+     */
+    public function getEmpleadosPorOrden(int $ordenProduccionId): array
+    {
+        if ($ordenProduccionId <= 0)
+            return [];
+
+        $sql = "SELECT e.id, e.noEmpleado, e.nombre, e.apellido, e.puesto
+                FROM empleado e
+                INNER JOIN asignacion_tarea at ON at.empleadoId = e.id
+                WHERE e.activo = 1
+                  AND at.ordenProduccionId = ?
+                ORDER BY e.nombre, e.apellido";
+
+        return $this->db->query($sql, [$ordenProduccionId])->getResultArray();
+    }
+
+    /**
+     * Obtiene empleados activos de una maquiladora específica
+     */
+    public function getEmpleadosPorMaquiladora(int $maquiladoraId): array
+    {
+        return $this->select('empleado.id, empleado.noEmpleado, empleado.nombre, empleado.apellido, empleado.puesto')
+            ->join('users u', 'u.id = empleado.idusuario', 'left')
+            ->where('empleado.activo', 1)
+            ->where('(empleado.maquiladoraID = ? OR u.maquiladoraIdFK = ?)', [$maquiladoraId, $maquiladoraId])
+            ->orderBy('empleado.nombre, empleado.apellido')
+            ->findAll();
+    }
+
+    /**
      * Búsqueda remota de empleados activos no asignados a una OP, filtrando por término.
      */
     public function buscarDisponiblesParaOP(int $opId, string $termino, int $limit = 20, $maquiladoraId = null): array

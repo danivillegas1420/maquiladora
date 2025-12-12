@@ -106,44 +106,95 @@ class ControlBultosController extends BaseController
         ]);
     }
 
+    
     /**
      * API: Obtener progreso y estado
      */
     public function progreso($id)
     {
-        if (!can('menu.inspeccion')) {
-            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
-        }
+        try {
+            if (!can('menu.inspeccion')) {
+                return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+            }
 
-        $controlModel = new ControlBultosModel();
-        $operacionModel = new OperacionControlModel();
+            $controlModel = new ControlBultosModel();
+            $operacionModel = new OperacionControlModel();
+            $empleadoModel = new EmpleadoModel();
 
-        $control = $controlModel->find($id);
+            $control = $controlModel->find($id);
 
-        if (!$control) {
-            return $this->response->setStatusCode(404)->setJSON([
+            if (!$control) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'ok' => false,
+                    'message' => 'Control no encontrado'
+                ]);
+            }
+
+            $progresoGeneral = $controlModel->calcularProgresoGeneral($id);
+            $listoParaArmado = $controlModel->verificarListoParaArmado($id);
+            $estadisticas = $operacionModel->getEstadisticas($id);
+
+            // Obtener lista de operaciones para la vista (versión simple original)
+            $operaciones = $operacionModel->where('controlBultoId', $id)->orderBy('orden', 'ASC')->findAll();
+
+            // Obtener empleados asignados a la orden de producción
+            $empleadosAsignados = [];
+            if (!empty($control['ordenProduccionId'])) {
+                try {
+                    // Obtener empleados de la orden de producción
+                    $empleadosAsignados = $empleadoModel->getEmpleadosPorOrden($control['ordenProduccionId']);
+                } catch (\Exception $e) {
+                    log_message('error', 'Error obteniendo empleados para orden ' . $control['ordenProduccionId'] . ': ' . $e->getMessage());
+                    $empleadosAsignados = [];
+                }
+            }
+
+            // Obtener tallas del control si aplica
+            $tallasControl = [];
+            if (!empty($control['ordenProduccionId'])) {
+                try {
+                    // Obtener detalles de tallas con nombres de sexo y talla
+                    $tallasControl = $this->db->query(
+                        "SELECT ptd.*, s.nombre AS nombre_sexo, t.nombre AS nombre_talla 
+                         FROM pedido_tallas_detalle ptd
+                         LEFT JOIN sexo s ON s.id_sexo = ptd.id_sexo
+                         LEFT JOIN tallas t ON t.id_talla = ptd.id_talla
+                         WHERE ptd.ordenProduccionId = ?",
+                        [$control['ordenProduccionId']]
+                    )->getResultArray();
+                } catch (\Exception $e) {
+                    log_message('error', 'Error obteniendo tallas de pedido para orden ' . $control['ordenProduccionId'] . ': ' . $e->getMessage());
+                    $tallasControl = [];
+                }
+            }
+
+            return $this->response->setJSON([
+                'ok' => true,
+                'data' => [
+                    'estado' => $control['estado'],
+                    'progreso_general' => $progresoGeneral,
+                    'listo_para_armado' => $listoParaArmado,
+                    'estadisticas' => $estadisticas,
+                    'operaciones' => $operaciones,
+                    'empleados' => $empleadosAsignados,
+                    'tallas' => $tallasControl,
+                    'con_tallas' => count($tallasControl) > 1 ? 1 : 0
+                ]
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Error en progreso para control ID ' . $id . ': ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+            
+            return $this->response->setStatusCode(500)->setJSON([
                 'ok' => false,
-                'message' => 'Control no encontrado'
+                'message' => 'Error interno del servidor: ' . $e->getMessage(),
+                'debug_info' => [
+                    'control_id' => $id,
+                    'error_line' => $e->getLine(),
+                    'error_file' => $e->getFile()
+                ]
             ]);
         }
-
-        $progresoGeneral = $controlModel->calcularProgresoGeneral($id);
-        $listoParaArmado = $controlModel->verificarListoParaArmado($id);
-        $estadisticas = $operacionModel->getEstadisticas($id);
-
-        // Obtener lista de operaciones para la vista
-        $operaciones = $operacionModel->where('controlBultoId', $id)->orderBy('orden', 'ASC')->findAll();
-
-        return $this->response->setJSON([
-            'ok' => true,
-            'data' => [
-                'estado' => $control['estado'],
-                'progreso_general' => $progresoGeneral,
-                'listo_para_armado' => $listoParaArmado,
-                'estadisticas' => $estadisticas,
-                'operaciones' => $operaciones
-            ]
-        ]);
     }
 
     /**
@@ -169,6 +220,26 @@ class ControlBultosController extends BaseController
             'plantillaId' => $this->request->getPost('plantillaId'),
             'usuario_creacion' => $usuarioId,
         ];
+
+        // Capturar tallas si se envían (control con tallas)
+        $tallas = [];
+        foreach ($this->request->getPost() as $key => $value) {
+            if (strpos($key, 'talla_') === 0 && !empty($value)) {
+                $tallaId = str_replace('talla_', '', $key);
+                $tallas[] = [
+                    'id_talla' => $tallaId,
+                    'cantidad' => intval($value)
+                ];
+            }
+        }
+
+        // Marcar si es control con tallas
+        $data['con_tallas'] = !empty($tallas) ? 1 : 0;
+        
+        // Agregar tallas al data si hay
+        if (!empty($tallas)) {
+            $data['tallas'] = $tallas;
+        }
 
         // Validaciones
         if (empty($data['ordenProduccionId']) || empty($data['cantidad_total'])) {
@@ -264,67 +335,129 @@ class ControlBultosController extends BaseController
     }
 
     /**
-     * API: Registrar producción de empleado
+     * API: Registrar producción de empleado(s) con cantidades individuales
      */
     public function registrarProduccion()
     {
         $session = session();
         $usuarioId = $session->get('usuario_id') ?? $session->get('id');
 
-        $data = [
-            'operacionControlId' => $this->request->getPost('operacionControlId'),
-            'empleadoId' => $this->request->getPost('empleadoId'),
-            'cantidad_producida' => $this->request->getPost('cantidad_producida'),
-            'fecha_registro' => $this->request->getPost('fecha_registro') ?? date('Y-m-d'),
-            'hora_inicio' => $this->request->getPost('hora_inicio'),
-            'hora_fin' => $this->request->getPost('hora_fin'),
-            'observaciones' => $this->request->getPost('observaciones'),
-            'registrado_por' => $usuarioId,
-        ];
+        // Obtener datos del formulario
+        $operacionControlId = $this->request->getPost('operacionControlId');
+        $fecha_registro = $this->request->getPost('fecha_registro') ?? date('Y-m-d');
+        $hora_inicio = $this->request->getPost('hora_inicio');
+        $hora_fin = $this->request->getPost('hora_fin');
+        $observaciones = $this->request->getPost('observaciones');
 
-        // Validaciones
-        if (empty($data['operacionControlId']) || empty($data['empleadoId']) || empty($data['cantidad_producida'])) {
+        // Obtener cantidades por empleado (JSON)
+        $empleadosCantidadesJson = $this->request->getPost('empleados_cantidades');
+        $cantidadesPorEmpleado = [];
+
+        if ($empleadosCantidadesJson) {
+            $cantidadesPorEmpleado = json_decode($empleadosCantidadesJson, true) ?: [];
+        }
+
+        // Validaciones básicas
+        if (empty($operacionControlId) || empty($cantidadesPorEmpleado)) {
             return $this->response->setJSON([
                 'ok' => false,
-                'message' => 'Operación, empleado y cantidad son requeridos'
+                'message' => 'Operación y cantidades por empleado son requeridos'
             ]);
         }
 
         // Validar que no se exceda la cantidad requerida
         $operacionModel = new OperacionControlModel();
-        $operacion = $operacionModel->find($data['operacionControlId']);
+        $operacion = $operacionModel->find($operacionControlId);
 
-        if ($operacion) {
-            $nuevasCantidad = $operacion['piezas_completadas'] + $data['cantidad_producida'];
-            if ($nuevasCantidad > $operacion['piezas_requeridas']) {
-                return $this->response->setJSON([
-                    'ok' => false,
-                    'message' => 'La cantidad excede las piezas requeridas. Máximo permitido: ' .
-                        ($operacion['piezas_requeridas'] - $operacion['piezas_completadas'])
-                ]);
-            }
+        if (!$operacion) {
+            return $this->response->setJSON([
+                'ok' => false,
+                'message' => 'Operación no encontrada'
+            ]);
+        }
+
+        // Calcular total de cantidades a registrar
+        $totalCantidad = 0;
+        foreach ($cantidadesPorEmpleado as $item) {
+            $totalCantidad += intval($item['cantidad']);
+        }
+
+        // Validar que el total no exceda las piezas requeridas
+        $nuevaCantidadTotal = $operacion['piezas_completadas'] + $totalCantidad;
+        if ($nuevaCantidadTotal > $operacion['piezas_requeridas']) {
+            $maximoPermitido = $operacion['piezas_requeridas'] - $operacion['piezas_completadas'];
+            return $this->response->setJSON([
+                'ok' => false,
+                'message' => "El total ($totalCantidad) excede las piezas requeridas. Máximo permitido: $maximoPermitido"
+            ]);
         }
 
         $registroModel = new RegistroProduccionModel();
-        $resultado = $registroModel->registrarProduccion($data);
+        $resultados = [];
+        $errores = [];
 
-        if (is_array($resultado) && isset($resultado['ok']) && $resultado['ok']) {
+        // Registrar producción para cada empleado con su cantidad específica
+        foreach ($cantidadesPorEmpleado as $item) {
+            $empleadoId = $item['empleadoId'];
+            $cantidad = $item['cantidad'];
+
+            // Solo registrar si la cantidad es mayor a 0
+            if ($cantidad > 0) {
+                $data = [
+                    'operacionControlId' => $operacionControlId,
+                    'empleadoId' => $empleadoId,
+                    'cantidad_producida' => $cantidad,
+                    'fecha_registro' => $fecha_registro,
+                    'hora_inicio' => $hora_inicio,
+                    'hora_fin' => $hora_fin,
+                    'observaciones' => $observaciones,
+                    'registrado_por' => $usuarioId,
+                ];
+
+                $resultado = $registroModel->registrarProduccion($data);
+
+                if (is_array($resultado) && isset($resultado['ok']) && $resultado['ok']) {
+                    $resultados[] = [
+                        'empleadoId' => $empleadoId,
+                        'cantidad' => $cantidad,
+                        'registroId' => $resultado['id']
+                    ];
+                } else {
+                    $errores[] = [
+                        'empleadoId' => $empleadoId,
+                        'cantidad' => $cantidad,
+                        'error' => $resultado
+                    ];
+                }
+            }
+        }
+
+        // Verificar si al menos una operación fue exitosa
+        if (!empty($resultados)) {
             // Obtener estado actualizado
             $controlModel = new ControlBultosModel();
             $nuevoEstado = $controlModel->actualizarEstado($operacion['controlBultoId']);
 
-            return $this->response->setJSON([
+            $response = [
                 'ok' => true,
-                'message' => 'Producción registrada correctamente',
-                'id' => $resultado['id'],
+                'message' => 'Producción registrada correctamente para ' . count($resultados) . ' empleado(s)',
+                'total_registrado' => $totalCantidad,
+                'registros' => $resultados,
                 'nuevo_estado' => $nuevoEstado
-            ]);
+            ];
+
+            if (!empty($errores)) {
+                $response['message'] .= '. Hubo errores con ' . count($errores) . ' empleado(s).';
+                $response['errores'] = $errores;
+            }
+
+            return $this->response->setJSON($response);
         }
 
         return $this->response->setJSON([
             'ok' => false,
-            'message' => 'No se pudo registrar la producción',
-            'debug' => $resultado // Return full debug info
+            'message' => 'No se pudo registrar la producción para ningún empleado',
+            'errores' => $errores
         ]);
     }
 

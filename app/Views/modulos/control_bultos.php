@@ -30,6 +30,20 @@
         justify-content: space-between;
         align-items: center;
     }
+
+    /* Centrar checkboxes en la tabla de empleados */
+    #tablaEmpleadosCantidad tbody td:first-child {
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    #tablaEmpleadosCantidad .empleado-checkbox {
+        margin: 0;
+    }
+
+    #tablaEmpleadosCantidad th:first-child {
+        text-align: center;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -107,6 +121,25 @@
                             <label class="form-label">Cantidad Total</label>
                             <input type="number" class="form-control" name="cantidad_total" required min="1">
                         </div>
+                        <!-- Sección de tallas (se mostrará dinámicamente) -->
+                        <div class="col-12" id="seccionTallas" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Esta orden de producción contiene múltiples tallas. Especifique las cantidades por talla:
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" id="tablaTallas">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Talla</th>
+                                            <th>Cantidad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyTallas">
+                                        <!-- Se generará dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                         <div class="col-12">
                             <label class="form-label">Observaciones</label>
                             <textarea class="form-control" name="observaciones" rows="2"></textarea>
@@ -148,6 +181,25 @@
                         <button class="btn btn-sm btn-outline-primary" id="btnRegistrarProduccion">
                             <i class="fas fa-clipboard-check"></i> Registrar Producción
                         </button>
+                    </div>
+                </div>
+
+                <!-- Sección de tallas (se mostrará dinámicamente) -->
+                <div class="mb-3" id="seccionTallasDetalle" style="display: none;">
+                    <h6>Detalles por Talla (Pedido)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Sexo</th>
+                                    <th>Talla</th>
+                                    <th>Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyTallasDetalle">
+                                <!-- Se generará dinámicamente -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -194,24 +246,36 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Empleado</label>
-                        <select class="form-select" name="empleadoId" id="regEmpleado" required>
-                            <option value="">Seleccione empleado...</option>
-                            <!-- Populate via JS -->
-                        </select>
+                        <label class="form-label">Empleados y Cantidades</label>
+                        <div class="table-responsive border rounded">
+                            <table class="table table-sm table-hover mb-0" id="tablaEmpleadosCantidad">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 60px;" class="text-center">
+                                            <input type="checkbox" id="selectAllEmpleados" title="Seleccionar todos">
+                                        </th>
+                                        <th>Empleado</th>
+                                        <th style="width: 120px;">Cantidad</th>
+                                        <th style="width: 100px;">Puesto</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyEmpleados">
+                                    <!-- Se generará dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <strong>Total Registrado:</strong> <span id="totalCantidad">0</span> unidades
+                            </small>
+                        </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Cantidad Realizada</label>
-                            <input type="number" class="form-control" name="cantidad_producida" required min="1">
-                        </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Fecha</label>
                             <input type="date" class="form-control" name="fecha_registro" value="<?= date('Y-m-d') ?>"
                                 required>
                         </div>
-                    </div>
-                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Hora Inicio</label>
                             <input type="time" class="form-control" name="hora_inicio">
@@ -401,8 +465,79 @@
     const plantillas = <?= json_encode($plantillas ?? []) ?>;
     const empleados = <?= json_encode($empleados ?? []) ?>;
     const empleadoActual = <?= json_encode($empleadoActual ?? null) ?>;
+    let empleadosOrden = []; // Empleados específicos de la orden de producción actual
 
     $(document).ready(function () {
+        // Función para poblar la tabla de empleados
+        function poblarTablaEmpleados() {
+            const tbody = $('#tbodyEmpleados');
+            tbody.empty();
+            
+            // Filtrar empleados por la orden de producción actual si es necesario
+            const empleadosAMostrar = empleadosOrden.length > 0 ? empleadosOrden : empleados;
+            
+            if (empleadosAMostrar.length === 0) {
+                tbody.html('<tr><td colspan="4" class="text-center text-muted">No hay empleados disponibles</td></tr>');
+                return;
+            }
+            
+            empleadosAMostrar.forEach(empleado => {
+                const row = `
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input empleado-checkbox" 
+                                   data-empleado-id="${empleado.id}" data-empleado-nombre="${empleado.nombre} ${empleado.apellido}">
+                        </td>
+                        <td>${empleado.nombre} ${empleado.apellido}</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm cantidad-input" 
+                                   min="0" placeholder="0" disabled
+                                   data-empleado-id="${empleado.id}">
+                        </td>
+                        <td><small class="text-muted">${empleado.puesto || 'N/A'}</small></td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+            
+            // Actualizar total
+            actualizarTotalCantidad();
+        }
+
+        // Función para actualizar el total de cantidades
+        function actualizarTotalCantidad() {
+            let total = 0;
+            $('.cantidad-input').each(function() {
+                const valor = parseInt($(this).val()) || 0;
+                total += valor;
+            });
+            $('#totalCantidad').text(total);
+        }
+
+        // Event handlers para la tabla de empleados
+        $(document).on('change', '.empleado-checkbox', function() {
+            const isChecked = $(this).is(':checked');
+            const empleadoId = $(this).data('empleado-id');
+            const cantidadInput = $(`.cantidad-input[data-empleado-id="${empleadoId}"]`);
+            
+            cantidadInput.prop('disabled', !isChecked);
+            if (!isChecked) {
+                cantidadInput.val(0);
+            }
+            
+            actualizarTotalCantidad();
+        });
+
+        $(document).on('input', '.cantidad-input', function() {
+            actualizarTotalCantidad();
+        });
+
+        // Checkbox "Seleccionar todos"
+        $(document).on('change', '#selectAllEmpleados', function() {
+            const isChecked = $(this).is(':checked');
+            $('.empleado-checkbox').prop('checked', isChecked).trigger('change');
+        });
+
         // Inicializar DataTable
         const tabla = $('#tablaControles').DataTable({
             ajax: {
@@ -486,6 +621,7 @@
             const selected = $(this).find(':selected');
             const diseno = selected.data('diseno');
             const cantidad = selected.data('cantidad');
+            const ordenId = selected.val();
 
             if (diseno) {
                 $('input[name="estilo"]').val(diseno);
@@ -493,8 +629,108 @@
             if (cantidad) {
                 $('input[name="cantidad_total"]').val(cantidad);
             }
+
+            // Verificar si la orden tiene múltiples tallas
+            if (ordenId) {
+                verificarTallasOrden(ordenId);
+            } else {
+                ocultarSeccionTallas();
+            }
         });
 
+        // Función para verificar si una orden tiene múltiples tallas
+        function verificarTallasOrden(ordenId) {
+            // Buscar la orden en el array de órdenes
+            const orden = ordenes.find(o => (o.opId || o.id) == ordenId);
+            
+            if (orden && orden.tallas && orden.tallas.length > 1) {
+                // Mostrar sección de tallas si hay más de una talla
+                mostrarSeccionTallas(orden.tallas);
+            } else if (orden && orden.tallas && orden.tallas.length === 1) {
+                // Si hay una sola talla, ocultar sección pero usar esa cantidad
+                ocultarSeccionTallas();
+                $('input[name="cantidad_total"]').val(orden.tallas[0].cantidad);
+            } else {
+                // No hay información de tallas, ocultar sección
+                ocultarSeccionTallas();
+            }
+        }
+
+        // Función para mostrar la sección de tallas
+        function mostrarSeccionTallas(tallas) {
+            const tbody = $('#tbodyTallas');
+            tbody.empty();
+            
+            let totalCantidad = 0;
+            tallas.forEach(talla => {
+                const row = `
+                    <tr>
+                        <td>${talla.nombre_talla || 'Talla ' + talla.id_talla}</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm cantidad-talla" 
+                                   name="talla_${talla.id_talla}" value="${talla.cantidad || 0}" 
+                                   min="0" data-talla-id="${talla.id_talla}">
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+                totalCantidad += parseInt(talla.cantidad || 0);
+            });
+            
+            // Actualizar cantidad total
+            $('input[name="cantidad_total"]').val(totalCantidad);
+            
+            // Mostrar sección
+            $('#seccionTallas').show();
+            
+            // Agregar event listeners para actualizar total
+            $('.cantidad-talla').on('input', function() {
+                actualizarTotalCantidadTallas();
+            });
+        }
+
+        // Función para ocultar la sección de tallas
+        function ocultarSeccionTallas() {
+            $('#seccionTallas').hide();
+            $('#tbodyTallas').empty();
+        }
+
+        // Función para actualizar el total de cantidades de tallas
+        function actualizarTotalCantidadTallas() {
+            let total = 0;
+            $('.cantidad-talla').each(function() {
+                const valor = parseInt($(this).val()) || 0;
+                total += valor;
+            });
+            $('input[name="cantidad_total"]').val(total);
+        }
+
+        // Funciones para manejar tallas en el modal de detalles
+        function mostrarTallasEnDetalle(tallas) {
+            const tbody = $('#tbodyTallasDetalle');
+            tbody.empty();
+            
+            tallas.forEach(talla => {
+                const row = `
+                    <tr>
+                        <td>${talla.nombre_sexo || 'N/A'}</td>
+                        <td>${talla.nombre_talla || 'N/A'}</td>
+                        <td>${talla.cantidad || 0}</td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+            
+            // Mostrar sección
+            $('#seccionTallasDetalle').show();
+        }
+
+        function ocultarTallasEnDetalle() {
+            $('#seccionTallasDetalle').hide();
+            $('#tbodyTallasDetalle').empty();
+        }
+
+                
         const selectPlantilla = $('select[name="tipo_prenda"]');
         // Usamos un Set para tipos únicos o listamos las plantillas disponibles
         plantillas.forEach(p => {
@@ -537,7 +773,16 @@
 
         // Ver Detalles
         $('#tablaControles tbody').on('click', '.btn-ver', function () {
+            console.log('Botón Ver Detalles presionado');
             const id = $(this).data('id');
+            console.log('ID del control:', id);
+            
+            if (!id) {
+                console.error('No se encontró el ID del control');
+                Swal.fire('Error', 'No se encontró el ID del control', 'error');
+                return;
+            }
+            
             cargarDetalleControl(id);
         });
 
@@ -622,66 +867,89 @@
         });
 
         function cargarDetalleControl(id) {
+            console.log('Cargando detalles para control ID:', id);
+            
             $.ajax({
                 url: `<?= base_url('modulo3/api/control-bultos') ?>/${id}/progreso`,
                 type: 'GET',
                 success: function (response) {
+                    console.log('Respuesta de progreso:', response);
+                    
                     if (response.ok) {
                         const data = response.data;
+                        
+                        // Extraer empleados específicos de la orden de producción desde la respuesta
+                        empleadosOrden = data.empleados || [];
+                        
+                        // Mostrar tallas si el control tiene múltiples tallas
+                        if (data.con_tallas && data.tallas && data.tallas.length > 0) {
+                            mostrarTallasEnDetalle(data.tallas);
+                        } else {
+                            ocultarTallasEnDetalle();
+                        }
+                        
                         // Actualizar cabecera del modal
-                        // Necesitamos info básica del control también, que podría venir en response.data o hacemos otra llamada
-                        // Por simplicidad, asumimos que el endpoint progreso devuelve todo o hacemos llamada a detalle
+                        $('#detalleOrden').text(data.orden || '---');
+                        $('#detalleEstilo').text(data.estilo || '---');
+                        $('#detalleEstado').html(`<span class="badge bg-secondary">${data.estado || 'Desconocido'}</span>`);
+                        $('#regControlId').val(id);
 
-                        // Llamada adicional para detalles básicos si faltan
-                        $.get(`<?= base_url('modulo3/api/control-bultos') ?>/${id}`, function (resDetalle) {
-                            if (resDetalle.ok) {
-                                const control = resDetalle.data;
-                                $('#detalleOrden').text(control.ordenFolio);
-                                $('#detalleEstilo').text(control.estilo);
-                                $('#detalleEstado').html(`<span class="badge bg-secondary">${control.estado}</span>`);
-                                $('#regControlId').val(control.id);
-
-                                // Poblar tabla de operaciones
-                                const tbody = $('#tablaOperaciones tbody');
-                                tbody.empty();
-                                const selectOperacion = $('#regOperacion');
-                                selectOperacion.empty().append('<option value="">Seleccione operación...</option>');
-
-                                data.operaciones.forEach(op => {
-                                    const progreso = op.porcentaje_completado;
-                                    const completado = parseFloat(progreso) >= 100;
-                                    const disabledAttr = completado ? 'disabled' : '';
-
-                                    const row = `
-                                        <tr>
-                                            <td>${op.nombre_operacion}</td>
-                                            <td>${op.es_componente == 1 ? '<span class="badge bg-info">Componente</span>' : '<span class="badge bg-primary">Armado</span>'}</td>
-                                            <td>${op.piezas_requeridas}</td>
-                                            <td>${op.piezas_completadas}</td>
-                                            <td>
-                                                <div class="progress">
-                                                    <div class="progress-bar" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div>
-                                                </div>
-                                            </td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-outline-success btn-op-registrar" data-id="${op.id}" ${disabledAttr} title="Registrar producción para esta operación">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                    tbody.append(row);
-
-                                    // Agregar a select de registro si no está completa
-                                    if (!completado) {
-                                        selectOperacion.append(`<option value="${op.id}">${op.nombre_operacion}</option>`);
-                                    }
-                                });
-
-                                $('#modalDetalleControl').modal('show');
+                        // Cargar operaciones en la tabla
+                        const tbodyOperaciones = $('#tablaOperaciones tbody');
+                        tbodyOperaciones.empty();
+                        
+                        data.operaciones.forEach(op => {
+                            const progreso = op.porcentaje_completado || 0;
+                            const completado = parseFloat(progreso) >= 100;
+                            const disabledAttr = completado ? 'disabled' : '';
+                            
+                            const row = `
+                                <tr>
+                                    <td>${op.nombre_operacion}</td>
+                                    <td>${op.es_componente == 1 ? '<span class="badge bg-info">Componente</span>' : '<span class="badge bg-primary">Armado</span>'}</td>
+                                    <td>${op.piezas_requeridas || 0}</td>
+                                    <td>${op.piezas_completadas || 0}</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-success btn-op-registrar" 
+                                                data-id="${op.id}" ${disabledAttr} 
+                                                title="Registrar producción para esta operación">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                            tbodyOperaciones.append(row);
+                        });
+                        
+                        // Poblar select de operaciones (solo operaciones no completadas)
+                        const selectOperacion = $('#regOperacion');
+                        selectOperacion.empty().append('<option value="">Seleccione operación...</option>');
+                        
+                        data.operaciones.forEach(op => {
+                            const progreso = op.porcentaje_completado || 0;
+                            const completado = parseFloat(progreso) >= 100;
+                            
+                            // Agregar al select si no está completa
+                            if (!completado) {
+                                selectOperacion.append(`<option value="${op.id}">${op.nombre_operacion}</option>`);
                             }
                         });
+
+                        console.log('Mostrando modal de detalles...');
+                        $('#modalDetalleControl').modal('show');
+                    } else {
+                        console.error('Error en progreso:', response.message);
+                        Swal.fire('Error', 'No se pudo cargar el progreso del control: ' + response.message, 'error');
                     }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al cargar progreso:', error);
+                    Swal.fire('Error', 'No se pudo cargar el progreso del control', 'error');
                 }
             });
         }
@@ -689,17 +957,8 @@
         // Abrir modal de registro desde detalle
         $('#btnRegistrarProduccion').click(function () {
 
-            // Poblar empleados
-            const selectEmpleado = $('#regEmpleado');
-            selectEmpleado.empty().append('<option value="">Seleccione empleado...</option>');
-            empleados.forEach(e => {
-                selectEmpleado.append(`<option value="${e.id}">${e.nombre} ${e.apellido}</option>`);
-            });
-
-            // Si hay empleadoActual en sesión, preseleccionarlo
-            if (empleadoActual && empleadoActual.id) {
-                selectEmpleado.val(empleadoActual.id);
-            }
+            // Poblar tabla de empleados
+            poblarTablaEmpleados();
 
             // Establecer hora de inicio y fin automáticamente al abrir el modal
             const inputHoraInicio = $('input[name="hora_inicio"]');
@@ -728,17 +987,8 @@
             }
             selectOperacion.val(opId);
 
-            // Poblar empleados y aplicar empleadoActual si existe
-            const selectEmpleado = $('#regEmpleado');
-
-            selectEmpleado.empty().append('<option value="">Seleccione empleado...</option>');
-            empleados.forEach(e => {
-                selectEmpleado.append(`<option value="${e.id}">${e.nombre} ${e.apellido}</option>`);
-            });
-
-            if (empleadoActual && empleadoActual.id) {
-                selectEmpleado.val(empleadoActual.id);
-            }
+            // Poblar tabla de empleados
+            poblarTablaEmpleados();
 
             // Establecer hora de inicio y fin automáticamente al abrir el modal
             const inputHoraInicio = $('input[name="hora_inicio"]');
@@ -756,7 +1006,31 @@
 
         // Guardar Registro Producción
         $('#btnGuardarProduccion').click(function () {
+            // Recopilar empleados y cantidades seleccionadas
+            const empleadosSeleccionados = [];
+            $('.empleado-checkbox:checked').each(function() {
+                const empleadoId = $(this).data('empleado-id');
+                const cantidad = parseInt($(`.cantidad-input[data-empleado-id="${empleadoId}"]`).val()) || 0;
+                
+                if (cantidad > 0) {
+                    empleadosSeleccionados.push({
+                        empleadoId: empleadoId,
+                        cantidad: cantidad
+                    });
+                }
+            });
+
+            // Validar que se haya seleccionado al menos un empleado con cantidad
+            if (empleadosSeleccionados.length === 0) {
+                Swal.fire('Atención', 'Debe seleccionar al menos un empleado y especificar una cantidad mayor a 0', 'warning');
+                return;
+            }
+
+            // Obtener datos del formulario
             const formData = new FormData(document.getElementById('formRegistroProduccion'));
+            
+            // Agregar los datos de empleados y cantidades como JSON
+            formData.append('empleados_cantidades', JSON.stringify(empleadosSeleccionados));
 
             $.ajax({
                 url: '<?= base_url('modulo3/api/control-bultos/registrar-produccion') ?>',
@@ -767,8 +1041,12 @@
                 success: function (response) {
                     if (response.ok) {
                         $('#modalRegistroProduccion').modal('hide');
-                        Swal.fire('Éxito', 'Producción registrada', 'success');
+                        Swal.fire('Éxito', 'Producción registrada correctamente', 'success');
                         document.getElementById('formRegistroProduccion').reset();
+                        // Limpiar tabla de empleados
+                        $('#tbodyEmpleados').empty();
+                        $('#selectAllEmpleados').prop('checked', false);
+                        $('#totalCantidad').text('0');
                         // Recargar detalle
                         const id = $('#regControlId').val();
                         cargarDetalleControl(id);
@@ -791,10 +1069,6 @@
                 }
             });
         });
-        // --- Lógica de Plantillas (Builder) ---
-        let operacionesBuilder = [];
-        let plantillaEditId = null; // null = nueva, número = editando existente
-        let plantillasCache = [];
 
         // Cargar plantillas al abrir el modal o tab
         $('#modalPlantillas').on('shown.bs.modal', function () {
