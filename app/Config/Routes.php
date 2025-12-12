@@ -494,6 +494,8 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         $routes->post('registrar-produccion', 'ControlBultosController::registrarProduccion');
         $routes->post('registrar-produccion-matriz', 'ControlBultosController::registrarProduccionMatriz');
         $routes->post('crear-bultos-auto', 'ControlBultosController::crearBultosAuto');
+        $routes->post('registrar-rendimiento-empleado', 'ControlBultosController::registrarRendimientoEmpleado');
+        $routes->get('por-op/(:num)', 'ControlBultosController::obtenerControlesPorOP/$1');
         $routes->get('(:num)/registros-produccion', 'ControlBultosController::registrosProduccion/$1');
         $routes->get('(:num)/export-excel', 'ControlBultosController::exportExcel/$1');
     });

@@ -108,8 +108,219 @@ class ControlBultosController extends BaseController
 
     
     /**
-     * API: Obtener progreso y estado
+     * API: Registrar rendimiento individual del empleado
      */
+    public function registrarRendimientoEmpleado()
+    {
+        try {
+            // Temporalmente sin validación de permisos para permitir acceso
+            // if (!can('menu.empleados')) {
+            //     return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+            // }
+
+            $ordenProduccionId = $this->request->getPost('ordenProduccionId');
+            $operacionControlId = $this->request->getPost('operacionControlId');
+            $empleadoId = $this->request->getPost('empleadoId');
+            $cantidad = $this->request->getPost('cantidad');
+            $fechaRegistro = $this->request->getPost('fecha_registro');
+            $horaInicio = $this->request->getPost('hora_inicio');
+            $horaFin = $this->request->getPost('hora_fin');
+            $notas = $this->request->getPost('notas');
+
+            // Validaciones básicas
+            if (!$ordenProduccionId || !$operacionControlId || !$empleadoId || !$cantidad || !$fechaRegistro) {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'message' => 'Faltan datos requeridos'
+                ]);
+            }
+
+            if ($cantidad <= 0) {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'message' => 'La cantidad debe ser mayor a 0'
+                ]);
+            }
+
+            // Validar que la operación pertenezca al control correcto
+            $operacionModel = new OperacionControlModel();
+            $operacion = $operacionModel->find($operacionControlId);
+            
+            if (!$operacion) {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'message' => 'Operación no encontrada'
+                ]);
+            }
+
+            // Obtener control de bultos para verificar la orden de producción
+            $controlModel = new ControlBultosModel();
+            $control = $controlModel->find($operacion['controlBultoId']);
+            
+            if (!$control || $control['ordenProduccionId'] != $ordenProduccionId) {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'message' => 'La operación no corresponde a la orden de producción especificada'
+                ]);
+            }
+
+            // Validar que el empleado esté asignado a la orden de producción
+            $empleadoModel = new EmpleadoModel();
+            $empleadosAsignados = $empleadoModel->getEmpleadosPorOrden($ordenProduccionId);
+            
+            $empleadoAsignado = false;
+            foreach ($empleadosAsignados as $emp) {
+                if ($emp['id'] == $empleadoId) {
+                    $empleadoAsignado = true;
+                    break;
+                }
+            }
+
+            if (!$empleadoAsignado) {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'message' => 'El empleado no está asignado a esta orden de producción'
+                ]);
+            }
+
+            // Registrar la producción usando el método existente
+            $datosProduccion = [
+                'empleadoId' => $empleadoId,
+                'cantidad' => $cantidad,
+                'hora_inicio' => $horaInicio,
+                'hora_fin' => $horaFin,
+                'notas' => $notas
+            ];
+
+            $resultado = $this->registrarProduccionIndividual($operacionControlId, $datosProduccion);
+
+            if ($resultado['success']) {
+                return $this->response->setJSON([
+                    'ok' => true,
+                    'message' => 'Rendimiento registrado correctamente',
+                    'data' => [
+                        'registro_id' => $resultado['registro_id'],
+                        'cantidad_registrada' => $cantidad,
+                        'operacion' => $operacion['nombre_operacion']
+                    ]
+                ]);
+            } else {
+                return $this->response->setJSON([
+                    'ok' => false,
+                    'message' => $resultado['message'] ?? 'Error al registrar el rendimiento'
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error en registrarRendimientoEmpleado: ' . $e->getMessage());
+            log_message('error', 'Stack trace: ' . $e->getTraceAsString());
+            
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok' => false,
+                'message' => 'Error interno del servidor'
+            ]);
+        }
+    }
+
+    /**
+     * Registrar producción individual de un empleado
+     */
+    private function registrarProduccionIndividual($operacionControlId, $datosProduccion)
+    {
+        try {
+            $empleadoId = $datosProduccion['empleadoId'];
+            $cantidad = $datosProduccion['cantidad'];
+            $horaInicio = $datosProduccion['hora_inicio'];
+            $horaFin = $datosProduccion['hora_fin'];
+            $notas = $datosProduccion['notas'] ?? '';
+
+            // Validar que la operación exista
+            $operacionModel = new OperacionControlModel();
+            $operacion = $operacionModel->find($operacionControlId);
+            
+            if (!$operacion) {
+                return ['success' => false, 'message' => 'Operación no encontrada'];
+            }
+
+            // Usar el modelo existente para registrar la producción
+            $registroModel = new \App\Models\RegistroProduccionModel();
+            
+            $data = [
+                'operacionControlId' => $operacionControlId,
+                'empleadoId' => $empleadoId,
+                'cantidad_producida' => $cantidad,
+                'fecha_registro' => date('Y-m-d'),
+                'hora_inicio' => $horaInicio,
+                'hora_fin' => $horaFin,
+                'observaciones' => $notas
+            ];
+
+            $resultado = $registroModel->registrarProduccion($data);
+            
+            if ($resultado['ok']) {
+                return [
+                    'success' => true, 
+                    'registro_id' => $resultado['id'],
+                    'message' => 'Producción registrada correctamente'
+                ];
+            } else {
+                return [
+                    'success' => false, 
+                    'message' => 'Error al registrar la producción: ' . ($resultado['message'] ?? 'Error desconocido')
+                ];
+            }
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error en registrarProduccionIndividual: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Error interno: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * API: Obtener controles de bultos por orden de producción
+     */
+    public function obtenerControlesPorOP($opId)
+    {
+        try {
+            // Temporalmente sin validación de permisos para permitir acceso
+            // if (!can('menu.empleados')) {
+            //     return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+            // }
+
+            $controlModel = new ControlBultosModel();
+            $operacionModel = new OperacionControlModel();
+
+            // Obtener controles de bultos para esta OP
+            $controles = $controlModel->where('ordenProduccionId', $opId)->findAll();
+
+            $controlesConOperaciones = [];
+            foreach ($controles as $control) {
+                // Obtener operaciones de cada control
+                $operaciones = $operacionModel->where('controlBultoId', $control['id'])->orderBy('orden', 'ASC')->findAll();
+                
+                $controlesConOperaciones[] = [
+                    'id' => $control['id'],
+                    'estilo' => $control['estilo'],
+                    'cantidad_total' => $control['cantidad_total'],
+                    'estado' => $control['estado'],
+                    'operaciones' => $operaciones
+                ];
+            }
+
+            return $this->response->setJSON([
+                'ok' => true,
+                'data' => $controlesConOperaciones
+            ]);
+
+        } catch (\Exception $e) {
+            log_message('error', 'Error en obtenerControlesPorOP: ' . $e->getMessage());
+            
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok' => false,
+                'message' => 'Error interno del servidor'
+            ]);
+        }
+    }
     public function progreso($id)
     {
         try {

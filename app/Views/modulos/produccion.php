@@ -278,6 +278,80 @@
         </form>
     </div>
 </div>
+
+<!-- Modal Registro de Rendimiento -->
+<div class="modal fade" id="rendimientoModal" tabindex="-1" aria-labelledby="rendimientoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <form id="formRendimiento">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="rendimientoLabel">
+                        <i class="bi bi-clipboard-check me-2"></i>Registrar Mi Rendimiento
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+            <div class="row g-3">
+                <!-- OP (Solo lectura) -->
+                <div class="col-md-6">
+                    <label class="form-label">OP (Folio)</label>
+                    <input type="text" class="form-control" id="rend-op-folio" readonly>
+                    <input type="hidden" id="rend-op-id" name="ordenProduccionId">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Fecha</label>
+                    <input type="date" class="form-control" id="rend-fecha" name="fecha_registro" required>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Operación</label>
+                    <select class="form-select" id="rend-operacion" name="operacionControlId" required>
+                        <option value="">Seleccione operación...</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Cantidad Producida</label>
+                    <input type="number" class="form-control" id="rend-cantidad" name="cantidad" min="0" required placeholder="Piezas producidas">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Hora Inicio</label>
+                    <input type="time" class="form-control" id="rend-hora-inicio" name="hora_inicio" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Hora Fin</label>
+                    <input type="time" class="form-control" id="rend-hora-fin" name="hora_fin">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Talla (si aplica)</label>
+                    <select class="form-select" id="rend-talla" name="talla_info">
+                        <option value="">General (sin talla específica)</option>
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Notas (opcional)</label>
+                    <textarea class="form-control" id="rend-notas" name="notas" rows="2" placeholder="Comentarios sobre la producción..."></textarea>
+                </div>
+
+                <!-- Información del empleado (oculto) -->
+                <input type="hidden" id="rend-empleado-id" name="empleadoId">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-check-circle me-1"></i> Guardar Rendimiento
+            </button>
+        </div>
+            </form>
+        </div>
+    </div>
+</div>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -337,6 +411,12 @@
                         actionButton = '<span class="badge bg-secondary">Ya finalizado</span>';
                     }
                     
+                    // Botón de registrar rendimiento (solo para empleados y corte cuando están en proceso)
+                    let rendimientoButton = '';
+                    if ((__isRolEmpleado && lower === 'en proceso') || (__isRolCorte && lower === 'en corte')) {
+                        rendimientoButton = '<button class="btn btn-sm btn-outline-primary btn-registrar-rendimiento" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '" title="Registrar mi rendimiento"><i class="bi bi-clipboard-check me-1"></i>Mi Rendimiento</button>';
+                    }
+                    
                     const reportButton = '<button class="btn btn-outline-secondary border-0 p-1 ms-2 btn-reporte-op" data-folio="' + (folio||'') + '" data-bs-toggle="modal" data-bs-target="#opReporteModal" title="Ver Reporte"><i class="bi bi-file-earmark-text fs-4"></i></button>';
                     const warningButton = '<button class="btn btn-outline-warning border-0 p-1 me-2 btn-incidencia-op" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '" data-bs-toggle="modal" data-bs-target="#opIncidenciaModal" title="Reportar Incidencia"><i class="bi bi-exclamation-triangle fs-4"></i></button>';
                     
@@ -351,8 +431,11 @@
                     );
 
                     const right = (
-                        '<div class="d-flex align-items-center gap-3">'
-                        + '<div>' + actionButton + '</div>'
+                        '<div class="d-flex align-items-center gap-3 flex-wrap">'
+                        + '<div class="d-flex align-items-center gap-2 flex-wrap">'
+                        +   actionButton
+                        +   rendimientoButton
+                        + '</div>'
                         + '<div class="d-flex align-items-center">'
                         +   warningButton
                         +   '<span class="badge bg-info text-dark status-badge">' + status + '</span>'
@@ -586,6 +669,157 @@
             btn.innerHTML = originalText;
         });
     });
+
+    // Handler para el botón de registrar rendimiento
+    document.addEventListener('click', function(ev){
+        const rendBtn = ev.target.closest('.btn-registrar-rendimiento');
+        if (rendBtn) {
+            const folio = rendBtn.getAttribute('data-folio') || '';
+            const id = rendBtn.getAttribute('data-id') || '';
+            
+            // Pre-llenar campos del modal
+            document.getElementById('rend-op-folio').value = folio;
+            document.getElementById('rend-op-id').value = id;
+            document.getElementById('rend-empleado-id').value = empId;
+            
+            // Establecer fecha actual
+            const today = new Date().toISOString().slice(0,10);
+            document.getElementById('rend-fecha').value = today;
+            
+            // Establecer hora actual
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const currentTime = `${hours}:${minutes}`;
+            document.getElementById('rend-hora-inicio').value = currentTime;
+            document.getElementById('rend-hora-fin').value = currentTime;
+            
+            // Cargar operaciones del control de bultos para esta OP
+            cargarOperacionesParaRendimiento(id);
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('rendimientoModal'));
+            modal.show();
+        }
+    });
+    
+    // Función para cargar operaciones disponibles para rendimiento
+    function cargarOperacionesParaRendimiento(opId) {
+        const selectOperacion = document.getElementById('rend-operacion');
+        selectOperacion.innerHTML = '<option value=""><div class="spinner-border spinner-border-sm text-primary me-2" role="status"><span class="visually-hidden">Cargando...</span></div>Cargando operaciones...</option>';
+        
+        // Buscar controles de bultos para esta OP
+        fetch(`<?= base_url('modulo3/api/control-bultos/por-op/') ?>${opId}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            selectOperacion.innerHTML = '<option value="">Seleccione operación...</option>';
+            
+            if (data.ok && data.data && data.data.length > 0) {
+                // Agrupar operaciones por control de bultos
+                data.data.forEach(control => {
+                    if (control.operaciones && control.operaciones.length > 0) {
+                        // Crear grupo para este control
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = `Control: ${control.estilo || 'N/A'} (ID: ${control.id})`;
+                        
+                        control.operaciones.forEach(op => {
+                            const option = document.createElement('option');
+                            option.value = op.id;
+                            option.textContent = `${op.nombre_operacion} - ${op.piezas_requeridas || 0} piezas`;
+                            option.dataset.controlId = control.id;
+                            optgroup.appendChild(option);
+                        });
+                        
+                        selectOperacion.appendChild(optgroup);
+                    }
+                });
+            } else {
+                // Si no hay controles, mostrar mensaje
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No hay operaciones disponibles';
+                option.disabled = true;
+                selectOperacion.appendChild(option);
+            }
+        })
+        .catch(err => {
+            console.error('Error al cargar operaciones:', err);
+            selectOperacion.innerHTML = '<option value="">Error al cargar operaciones</option>';
+        });
+    }
+    
+    // Submit del formulario de rendimiento
+    document.getElementById('formRendimiento').addEventListener('submit', function(e){
+        e.preventDefault();
+        const form = this;
+        const formData = new FormData(form);
+        
+        // Validar que la hora fin sea mayor o igual a la hora inicio
+        const horaInicio = formData.get('hora_inicio');
+        const horaFin = formData.get('hora_fin');
+        if (horaFin && horaFin < horaInicio) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'La hora de fin no puede ser anterior a la hora de inicio'
+            });
+            return;
+        }
+        
+        const btn = form.querySelector('button[type="submit"]');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+        fetch('<?= base_url('modulo3/api/control-bultos/registrar-rendimiento-empleado') ?>', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Rendimiento registrado!',
+                    text: 'Tu producción ha sido registrada correctamente.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                
+                // Cerrar modal y limpiar formulario
+                const modal = bootstrap.Modal.getInstance(document.getElementById('rendimientoModal'));
+                modal.hide();
+                form.reset();
+                
+                // Recargar lista de órdenes para actualizar estado
+                setTimeout(() => {
+                    cargarOrdenes();
+                }, 1000);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.message || 'No se pudo registrar el rendimiento'
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Error al registrar rendimiento:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudo registrar el rendimiento. Verifique la conexión.'
+            });
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    });
+
     const __runningTimers = new Map();
     function __format(ms){
         const s = Math.floor(ms/1000);
