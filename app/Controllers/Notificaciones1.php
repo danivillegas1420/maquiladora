@@ -28,27 +28,17 @@ class Notificaciones1 extends BaseController
             ]);
         }
 
-        $db = \Config\Database::connect();
-
-        // Listado: no leídas primero, luego más recientes, FILTRADO POR MAQUILADORA
-        log_message('debug', 'Notificaciones1 - Consultando para maquiladoraId: ' . (int) $maquiladoraId . ', userId: ' . (int) $userId);
+        // Use the new filtered method from NotificacionModel
+        $notificationModel = new NotificacionModel();
         
-        $items = $db->table('notificaciones n')
-            ->select('n.*, IFNULL(un.is_leida,0) AS is_leida, un.id AS enlace_id')
-            ->join(
-                'usuarioNotificacion un',
-                'un.idNotificacionFK = n.id AND un.idUserFK = '.$db->escape($userId),
-                'left',
-                false // no escape en la condición del JOIN
-            )
-            ->where('n.maquiladoraID', (int) $maquiladoraId) // FILTRO CRÍTICO POR MAQUILADORA
-            // FIX: un solo orderBy crudo para evitar que CI meta "ASC" dentro del IFNULL
-            ->orderBy('IFNULL(un.is_leida,0) ASC, n.created_at DESC', '', false)
-            ->get()->getResultArray();
+        // Get notifications filtered by role permissions
+        log_message('debug', 'Notificaciones1 - Consultando para maquiladoraId: ' . (int) $maquiladoraId . ', userId: ' . (int) $userId);
+        $items = $notificationModel->getWithReadStatusFiltered((int) $maquiladoraId, (int) $userId, 50);
 
-        log_message('debug', 'Notificaciones1 - Encontradas: ' . count($items) . ' notificaciones');
+        // Get unread count filtered by role permissions
+        $notifCount = $notificationModel->getUnreadCountFiltered((int) $maquiladoraId, (int) $userId);
 
-        $notifCount = (new UsuarioNotificacionModel())->contarNoLeidas($userId);
+        log_message('debug', 'Notificaciones1 - Encontradas: ' . count($items) . ' notificaciones, no leídas: ' . $notifCount);
 
         return view('modulos/notificaciones1', [
             'title'      => 'Notificaciones',

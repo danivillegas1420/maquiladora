@@ -20,7 +20,12 @@ class CatalogoDisenos extends BaseController
         $db = \Config\Database::connect();
         $maquiladoraId = session()->get('maquiladora_id');
         $soloMaquiladora = (string) $this->request->getGet('solo_maquiladora') === '1';
-        $where = $maquiladoraId ? "WHERE maquiladoraID = " . $db->escape($maquiladoraId) : "";
+        
+        // Solo aplicar filtro de maquiladora si explícitamente se solicita
+        $where = '';
+        if ($soloMaquiladora && $maquiladoraId) {
+            $where = "WHERE maquiladoraID = " . $db->escape($maquiladoraId);
+        }
 
         $rows = [];
         $queries = [
@@ -209,7 +214,12 @@ class CatalogoDisenos extends BaseController
         $db = \Config\Database::connect();
         $maquiladoraId = session()->get('maquiladora_id');
         $soloMaquiladora = (string) $this->request->getGet('solo_maquiladora') === '1';
-        $where = $maquiladoraId ? "WHERE maquiladoraID = " . $db->escape($maquiladoraId) : "";
+        
+        // Solo aplicar filtro de maquiladora si explícitamente se solicita
+        $where = '';
+        if ($soloMaquiladora && $maquiladoraId) {
+            $where = "WHERE maquiladoraID = " . $db->escape($maquiladoraId);
+        }
 
         $rows = [];
         $queries = [

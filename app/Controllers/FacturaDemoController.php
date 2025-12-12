@@ -74,6 +74,10 @@ class FacturaDemoController extends Controller
     /** Vista HTML de previsualización */
     public function preview(int $embarqueId = 1)
     {
+        if (!can('menu.facturacion_demo')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $data = $this->demoData($embarqueId);
         // guardamos en sesión para usar mismos datos al pedir el PDF
         session()->set('factura_demo_'.$embarqueId, $data);
@@ -83,6 +87,10 @@ class FacturaDemoController extends Controller
     /** Descarga/visualización del PDF (sin corrupción de bytes) */
     public function pdf(int $embarqueId = 1)
     {
+        if (!can('menu.facturacion_demo')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         // mismos datos que viste en HTML
         $data = session()->get('factura_demo_'.$embarqueId) ?? $this->demoData($embarqueId);
 

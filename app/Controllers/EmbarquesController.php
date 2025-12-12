@@ -16,6 +16,10 @@ class EmbarquesController extends BaseController
      */
     public function packing()
     {
+        if (!can('menu.embarques_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         // Maquiladora desde sesión (usa el índice que tengas configurado)
         $maquiladoraId = session('maquiladora_id') ?? session('maquiladoraID') ?? null;
         $maquiladoraId = $maquiladoraId !== null ? (int) $maquiladoraId : null;
@@ -47,6 +51,10 @@ class EmbarquesController extends BaseController
      */
     public function crear()
     {
+        if (!can('menu.embarques_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $maquiladoraId = session('maquiladora_id') ?? session('maquiladoraID') ?? null;
         $maquiladoraId = $maquiladoraId !== null ? (int) $maquiladoraId : null;
 

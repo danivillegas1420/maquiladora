@@ -44,12 +44,12 @@ class Notificaciones2 extends BaseController
             ]);
         }
 
-        // Get notifications with read status
+        // Get notifications with read status FILTERED BY ROLE PERMISSIONS
         log_message('debug', 'Notificaciones2 - Consultando para maquiladoraId: ' . (int) $maquiladoraId . ', userId: ' . (int) $userId);
-        $notifications = $this->notificationModel->getWithReadStatus((int) $maquiladoraId, (int) $userId, 50);
+        $notifications = $this->notificationModel->getWithReadStatusFiltered((int) $maquiladoraId, (int) $userId, 50);
 
-        // Get unread count
-        $unreadCount = $this->notificationModel->getUnreadCount((int) $maquiladoraId, (int) $userId);
+        // Get unread count FILTERED BY ROLE PERMISSIONS
+        $unreadCount = $this->notificationModel->getUnreadCountFiltered((int) $maquiladoraId, (int) $userId);
 
         // Debug: Log resultados
         log_message('debug', 'Notificaciones2 - Encontradas: ' . count($notifications) . ' notificaciones, no leídas: ' . $unreadCount);

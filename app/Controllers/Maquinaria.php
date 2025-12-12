@@ -66,6 +66,10 @@ class Maquinaria extends BaseController
     /** Inventario */
     public function index()
     {
+        if (!can('menu.maquinaria_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $model = new MaquinaModel();
         $db    = \Config\Database::connect();
         $fields = $db->getFieldNames($model->getTable());
@@ -121,6 +125,10 @@ class Maquinaria extends BaseController
     /** Guardar (genera código si viene vacío y evita choques) */
     public function guardar()
     {
+        if (!can('menu.maquinaria_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         try {
             $post = $this->request->getPost([
                 'codigo','modelo','fabricante','serie','fechaCompra','ubicacion','activa'
@@ -165,6 +173,10 @@ class Maquinaria extends BaseController
     /** Formulario de edición */
     public function editar($id)
     {
+        if (!can('menu.maquinaria_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $model = new MaquinaModel();
         $row   = $model->find($id);
         if (!$row) throw new PageNotFoundException('Máquina no encontrada');
@@ -177,6 +189,10 @@ class Maquinaria extends BaseController
     /** Actualizar registro */
     public function actualizar($id)
     {
+        if (!can('menu.maquinaria_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         try {
             $model = new MaquinaModel();
             $row   = $model->find($id);
@@ -220,6 +236,10 @@ class Maquinaria extends BaseController
     /** Eliminar */
     public function eliminar($id)
     {
+        if (!can('menu.maquinaria_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $model = new MaquinaModel();
         if (!$model->find($id)) {
             return redirect()->back()->with('error', 'Registro no encontrado.');

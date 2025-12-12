@@ -230,37 +230,97 @@ class DashboardService
     public function getInventarioStats()
     {
         try {
-            // Top 5 artículos con menor stock relativo (stock / stock_min)
-            try {
-                $sql = "
-                    SELECT a.nombre, s.cantidad, a.stock_min
-                    FROM articulo a
-                    JOIN stock s ON s.articuloId = a.id
-                    WHERE a.stock_min > 0
-                    ORDER BY (s.cantidad / a.stock_min) ASC
-                    LIMIT 5
-                ";
-                $result = $this->db->query($sql)->getResultArray();
-            } catch (\Throwable $e) {
-                // Fallback: Top 5 con menos stock
-                $sql = "
-                    SELECT a.nombre, SUM(s.cantidad) as cantidad
-                    FROM articulo a
-                    JOIN stock s ON s.articuloId = a.id
-                    GROUP BY a.id, a.nombre
-                    ORDER BY cantidad ASC
-                    LIMIT 5
-                ";
-                $result = $this->db->query($sql)->getResultArray();
+            // Usar el mismo sistema que catalogodisenos.php
+            // Llamar al método articulosJson que ya funciona correctamente
+            $catalogoController = new \App\Controllers\CatalogoDisenos();
+            
+            // Simular la llamada al método articulosJson
+            $db = \Config\Database::connect();
+            $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+            
+            log_message('debug', 'DashboardService: maquiladoraId = ' . ($maquiladoraId ?: 'null'));
+            
+            // Usar la misma lógica que articulosJson pero para inventario
+            $rows = [];
+            $tables = ['articulos', 'Articulos', 'articulo', 'Articulo'];
+            foreach ($tables as $t) {
+                try {
+                    $builder = $db->table($t)
+                        ->select('id, nombre, unidadMedida, sku');
+
+                    // Si la tabla tiene maquiladoraID, filtrar
+                    try {
+                        if ($maquiladoraId) {
+                            $fields = $db->getFieldNames($t);
+                            if (in_array('maquiladoraID', $fields, true)) {
+                                $builder->where('maquiladoraID', (int) $maquiladoraId);
+                            }
+                        }
+                    } catch (\Throwable $e) {}
+
+                    $rows = $builder->orderBy('nombre', 'ASC')->limit(5)->get()->getResultArray();
+                    if ($rows !== null) break;
+                } catch (\Throwable $e) {
+                    $rows = [];
+                }
+            }
+            
+            log_message('debug', 'DashboardService: articulos encontrados = ' . count($rows));
+            
+            // Si no hay artículos, retornar estructura vacía pero válida
+            if (empty($rows)) {
+                log_message('warning', 'DashboardService: No se encontraron artículos para el inventario');
+                return [
+                    'labels' => [],
+                    'datasets' => [
+                        [
+                            'label' => 'Stock Actual',
+                            'data' => [],
+                            'backgroundColor' => 'rgba(54, 162, 235, 0.6)',
+                        ]
+                    ]
+                ];
             }
 
+            // Para cada artículo, intentar obtener su stock
             $labels = [];
             $data = [];
-
-            foreach ($result as $row) {
-                $labels[] = substr($row['nombre'], 0, 15) . '...';
-                $data[] = (float) $row['cantidad'];
+            
+            foreach ($rows as $articulo) {
+                try {
+                    // Buscar stock para este artículo
+                    $stockBuilder = $db->table('stock')
+                        ->select('cantidad')
+                        ->where('articuloId', $articulo['id']);
+                    
+                    // Aplicar filtro de maquiladora al stock también
+                    if ($maquiladoraId) {
+                        try {
+                            $stockFields = $db->getFieldNames('stock');
+                            if (in_array('maquiladoraID', $stockFields, true)) {
+                                $stockBuilder->where('maquiladoraID', (int) $maquiladoraId);
+                            }
+                        } catch (\Throwable $e) {}
+                    }
+                    
+                    $stockResult = $stockBuilder->get()->getResultArray();
+                    $cantidad = 0;
+                    
+                    if (!empty($stockResult)) {
+                        $cantidad = array_sum(array_column($stockResult, 'cantidad'));
+                    }
+                    
+                    $labels[] = substr($articulo['nombre'], 0, 15) . '...';
+                    $data[] = (float) $cantidad;
+                    
+                } catch (\Throwable $e) {
+                    // Si hay error getting stock, usar 0
+                    $labels[] = substr($articulo['nombre'], 0, 15) . '...';
+                    $data[] = 0;
+                }
             }
+
+            log_message('debug', 'DashboardService: returning ' . count($labels) . ' inventory items');
 
             return [
                 'labels' => $labels,
@@ -279,22 +339,94 @@ class DashboardService
     }
     public function getNotifications($userId, $limit = 5)
     {
-        // Notificaciones del usuario o generales
-        $sql = "
-            SELECT nivel, titulo, sub, mensaje, color, created_at
-            FROM notificaciones 
-            ORDER BY created_at DESC 
-            LIMIT ?
-        ";
-
-        $result = $this->db->query($sql, [$limit])->getResultArray();
-
-        // Si no hay notificaciones, devolver array vacío (o simuladas si es demo)
+        // Get user notification permissions based on roles
+        $notificationModel = new \App\Models\NotificacionModel();
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+        
+        if (!$maquiladoraId) {
+            return [];
+        }
+        
+        // Get user's allowed notification types
+        $allowedTypes = $notificationModel->getUserNotificationPermissions($userId, $maquiladoraId);
+        
+        // If no specific permissions, return empty array (or could fallback to all types)
+        if (empty($allowedTypes)) {
+            return [];
+        }
+        
+        // Get filtered notifications
+        $result = $notificationModel->getWithReadStatusFiltered($maquiladoraId, $userId, $limit);
+        
+        // Si no hay notificaciones, devolver array vacío
         if (empty($result)) {
             return [];
         }
 
         return $result;
+    }
+    
+    // DEBUG METHOD - Remove after fixing
+    public function debugInventario()
+    {
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+        
+        $debug = [
+            'maquiladoraId' => $maquiladoraId,
+            'tables_exist' => [],
+            'table_counts' => [],
+            'sample_data' => []
+        ];
+        
+        // Check if tables exist
+        $tables = ['articulo', 'articulos', 'stock'];
+        foreach ($tables as $table) {
+            try {
+                $debug['tables_exist'][$table] = $this->db->tableExists($table);
+                if ($debug['tables_exist'][$table]) {
+                    $debug['table_counts'][$table] = $this->db->table($table)->countAll();
+                    
+                    // Get sample data
+                    if ($table === 'articulo' || $table === 'articulos') {
+                        $sample = $this->db->table($table)->limit(3)->get()->getResultArray();
+                        $debug['sample_data'][$table] = $sample;
+                    }
+                }
+            } catch (\Throwable $e) {
+                $debug['tables_exist'][$table] = false;
+                $debug['errors'][$table] = $e->getMessage();
+            }
+        }
+        
+        // Test the actual query
+        try {
+            if ($maquiladoraId) {
+                $sql = "
+                    SELECT a.nombre, s.cantidad, a.stock_min
+                    FROM articulo a
+                    JOIN stock s ON s.articuloId = a.id
+                    WHERE a.stock_min > 0 
+                    AND (a.maquiladoraID = ? OR s.maquiladoraID = ? OR a.maquiladoraID IS NULL)
+                    ORDER BY (s.cantidad / a.stock_min) ASC
+                    LIMIT 5
+                ";
+                $debug['query_result'] = $this->db->query($sql, [$maquiladoraId, $maquiladoraId])->getResultArray();
+            } else {
+                $sql = "
+                    SELECT a.nombre, s.cantidad, a.stock_min
+                    FROM articulo a
+                    JOIN stock s ON s.articuloId = a.id
+                    WHERE a.stock_min > 0
+                    ORDER BY (s.cantidad / a.stock_min) ASC
+                    LIMIT 5
+                ";
+                $debug['query_result'] = $this->db->query($sql)->getResultArray();
+            }
+        } catch (\Throwable $e) {
+            $debug['query_error'] = $e->getMessage();
+        }
+        
+        return $debug;
     }
     public function getLogisticaStats()
     {

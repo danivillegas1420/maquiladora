@@ -49,7 +49,8 @@ class NotificationService
                 'mensaje' => $mensaje,
                 'sub' => $sub,
                 'nivel' => $nivel,
-                'color' => $color ?? $this->getColorForLevel($nivel)
+                'color' => $color ?? $this->getColorForLevel($nivel),
+                'tipo_notificacion' => $tipoNotificacion
             ];
 
             log_message('debug', "NOTIFICATION DEBUG - Insertando notificación con datos: " . json_encode($data));

@@ -71,6 +71,7 @@ $routes->post('maquiladora/update', 'Maquiladora::update');
 
 // Dashboard API
 $routes->get('api/dashboard', 'Dashboard::api');
+$routes->get('api/debug-inventory', 'Dashboard::debugInventory');
 
 /* --------------------------------------------------------------------
  * Módulo 11 - Usuarios (acciones AJAX sueltas)
@@ -277,7 +278,7 @@ $routes->get('diag/ping', fn() => 'OK DIAG PING');
 $routes->get('diag/agregar', function () {
     return view('modulos/agregar_pedido', ['title' => 'Diag · Agregar Pedido', 'notifCount' => 0]);
 });
-$routes->get('clientes', 'ClientesPage::index', ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Envios,Calidad,Almacenista,RH,Inspector,Diseñador']);
+$routes->get('clientes', 'ClientesPage::index', ['filter' => 'auth']);
 
 /* --------------------------------------------------------------------
  * Módulo 2
@@ -295,6 +296,7 @@ $routes->group('modulo2', [], function ($routes) {
 
     // Catálogos - Sexo
     $routes->get('catalogos/sexo', 'CatalogoDisenos::catalogoSexo');
+    $routes->get('catalogos/sexo/debug', 'CatalogoDisenos::debugCatalogoSexo');
     $routes->post('catalogos/sexo/crear', 'CatalogoDisenos::catalogoSexoCrear');
     $routes->post('catalogos/sexo/actualizar/(:num)', 'CatalogoDisenos::catalogoSexoActualizar/$1');
     $routes->post('catalogos/sexo/eliminar/(:num)', 'CatalogoDisenos::catalogoSexoEliminar/$1');
@@ -319,6 +321,7 @@ $routes->group('modulo2', [], function ($routes) {
 
     // Artículos (para materiales)
     $routes->get('articulos/json', 'CatalogoDisenos::articulosJson');
+    $routes->get('articulos/debug', 'CatalogoDisenos::debugArticulos');
 });
 
 /* --------------------------------------------------------------------
@@ -396,6 +399,8 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->group('api/notifications', function ($r) {
         $r->get('', 'NotificationController::index');
         $r->get('unread-count', 'NotificationController::unreadCount');
+        $r->get('all', 'NotificationController::indexAll');
+        $r->get('permissions', 'NotificationController::getUserPermissions');
         $r->post('(:num)/read', 'NotificationController::markAsRead/$1');
         $r->post('read-all', 'NotificationController::markAllAsRead');
     });
@@ -408,7 +413,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->get('notificaciones2/generate-test', 'Notificaciones2::generateTestNotifications');
 
     // Incidencias - modal ligero
-    $routes->get('incidencias/modal', 'Incidencias::modal', ['filter' => 'auth:Administrador,Jefe,Empleado,Almacenista,Calidad,Inspector,Diseñador']);
+    $routes->get('incidencias/modal', 'Incidencias::modal', ['filter' => 'auth']);
 
     // ===== ALIAS Calidad (Desperdicios & Reprocesos) bajo /modulo3 =====
     $routes->get('desperdicios', 'Calidad::desperdicios');
@@ -503,16 +508,16 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
 
 
     // Inventario / Mantenimiento (modulo3)
-    $routes->get('mantenimiento_inventario', 'Maquinaria::index', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+    $routes->get('mantenimiento_inventario', 'Maquinaria::index', ['filter' => 'auth']);
     $routes->get('mantenimiento_preventivo', 'Modulos::mantenimientoPreventivo');
     $routes->get('mantenimiento_correctivo', fn() => redirect()->to(site_url('mantenimiento/correctivo')));
 
     // CRUD Maquinaria
-    $routes->get('maquinaria', 'Maquinaria::index', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
-    $routes->post('maquinaria/guardar', 'Maquinaria::guardar', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
-    $routes->get('maquinaria/editar/(:num)', 'Maquinaria::editar/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
-    $routes->post('maquinaria/actualizar/(:num)', 'Maquinaria::actualizar/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
-    $routes->post('maquinaria/eliminar/(:num)', 'Maquinaria::eliminar/$1', ['filter' => 'auth:Administrador,Jefe,Almacenista']);
+    $routes->get('maquinaria', 'Maquinaria::index', ['filter' => 'auth']);
+    $routes->post('maquinaria/guardar', 'Maquinaria::guardar', ['filter' => 'auth']);
+    $routes->get('maquinaria/editar/(:num)', 'Maquinaria::editar/$1', ['filter' => 'auth']);
+    $routes->post('maquinaria/actualizar/(:num)', 'Maquinaria::actualizar/$1', ['filter' => 'auth']);
+    $routes->post('maquinaria/eliminar/(:num)', 'Maquinaria::eliminar/$1', ['filter' => 'auth']);
 
     /* =========================
      * LOGÍSTICA · PREPARACIÓN / PACKING
@@ -521,7 +526,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->get(
         'logistica_preparacion',
         'EmbarquesController::packing',
-        ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+        ['filter' => 'auth']
     );
     // Alias corto
     $routes->get('preparacion', 'EmbarquesController::packing');
@@ -532,7 +537,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->post(
         'embarques/crear',
         'EmbarquesController::crear',
-        ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+        ['filter' => 'auth']
     );
     $routes->post(
         'embarques/(:num)/agregar-orden',
@@ -560,20 +565,19 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     /* =========================
      * LOGÍSTICA · GESTIÓN (Tracking)
      * ========================= */
-    $routes->get('logistica_gestion', 'LogisticaController::gestion', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
+    $routes->get('logistica_gestion', 'LogisticaController::gestion', ['filter' => 'auth']);
     $routes->get('gestion', 'LogisticaController::gestion');
 
     // CRUD envíos
-    $routes->post('envios/crear', 'LogisticaController::crearEnvio', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
-    $routes->get('envios/(:num)/json', 'LogisticaController::envioJson/$1', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
-    $routes->post('envios/(:num)/editar', 'LogisticaController::editarEnvio/$1', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
-    $routes->post('envios/(:num)/eliminar', 'LogisticaController::eliminarEnvio/$1', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
+    $routes->post('envios/crear', 'LogisticaController::crearEnvio', ['filter' => 'auth']);
+    $routes->get('envios/(:num)/json', 'LogisticaController::envioJson/$1', ['filter' => 'auth']);
+    $routes->post('envios/(:num)/editar', 'LogisticaController::editarEnvio/$1', ['filter' => 'auth']);
 
     /* =========================
      * LOGÍSTICA · DOCUMENTOS
      * ========================= */
-    $routes->get('documentos', 'LogisticaController::documentos', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
-    $routes->get('logistica_documentos', 'LogisticaController::documentos', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
+    $routes->get('documentos', 'LogisticaController::documentos', ['filter' => 'auth']);
+    $routes->get('logistica_documentos', 'LogisticaController::documentos', ['filter' => 'auth']);
     // CRUD documentos
     $routes->post('documentos/crear', 'LogisticaController::crearDocumento');
     $routes->get('documentos/(:num)/json', 'LogisticaController::docJson/$1');
@@ -597,20 +601,20 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     $routes->post('storage/list', 'StorageProxy::list');
 
     // Órdenes de clientes
-    $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes', ['filter' => 'auth:Administrador,Jefe,Empleado,Corte,Envios,Calidad,Almacenista,RH,Inspector,Diseñador']);
+    $routes->get('ordenesclientes', 'Modulos::m1_ordenesclientes', ['filter' => 'auth']);
 });
 
 /* --------------------------------------------------------------------
  * Calidad (Desperdicios & Reprocesos) - grupo raíz
  * ------------------------------------------------------------------*/
 $routes->group('calidad', [], function ($routes) {
-    $routes->get('desperdicios', 'Calidad::desperdicios', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
-    $routes->post('desperdicios/guardar', 'Calidad::guardarDesecho', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
-    $routes->get('desperdicios/(:num)', 'Calidad::verDesecho/$1', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
-    $routes->post('desperdicios/(:num)/editar', 'Calidad::editarDesecho/$1', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
-    $routes->post('reprocesos/guardar', 'Calidad::guardarReproceso', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
-    $routes->get('reprocesos/(:num)', 'Calidad::verReproceso/$1', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
-    $routes->post('reprocesos/(:num)/editar', 'Calidad::editarReproceso/$1', ['filter' => 'auth:Administrador,Jefe,Calidad,Almacenista,Diseñador']);
+    $routes->get('desperdicios', 'Calidad::desperdicios', ['filter' => 'auth']);
+    $routes->post('desperdicios/guardar', 'Calidad::guardarDesecho', ['filter' => 'auth']);
+    $routes->get('desperdicios/(:num)', 'Calidad::verDesecho/$1', ['filter' => 'auth']);
+    $routes->post('desperdicios/(:num)/editar', 'Calidad::editarDesecho/$1', ['filter' => 'auth']);
+    $routes->post('reprocesos/guardar', 'Calidad::guardarReproceso', ['filter' => 'auth']);
+    $routes->get('reprocesos/(:num)', 'Calidad::verReproceso/$1', ['filter' => 'auth']);
+    $routes->post('reprocesos/(:num)/editar', 'Calidad::editarReproceso/$1', ['filter' => 'auth']);
 });
 
 
@@ -718,12 +722,12 @@ $routes->group('api/storage', static function ($r) {
 $routes->get(
     'logistica/embarque/(:num)/facturar/ui',
     'LogisticaController::facturarUI/$1',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 $routes->post(
     'logistica/embarque/(:num)/facturar',
     'LogisticaController::facturar/$1',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 
 /* --------------------------------------------------------------------
@@ -732,22 +736,22 @@ $routes->post(
 $routes->get(
     'logistica/embarque/(:num)/aduanas',
     'EmbarqueAduana::index/$1',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 $routes->get(
     'logistica/embarque/(:num)/aduanas/listar',
     'EmbarqueAduana::listar/$1',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 $routes->post(
     'logistica/embarque/aduanas/guardar',
     'EmbarqueAduana::guardar',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 $routes->post(
     'logistica/embarque/aduanas/eliminar',
     'EmbarqueAduana::eliminar',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 
 /* --------------------------------------------------------------------
@@ -756,35 +760,35 @@ $routes->post(
 $routes->get(
     'logistica/embarque/(:num)/etiqueta',
     'EtiquetaEmbarqueController::show/$1',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 $routes->post(
     'logistica/embarque/(:num)/etiqueta/guardar',
     'EtiquetaEmbarqueController::guardar/$1',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 $routes->get(
     'logistica/etiqueta/(:num)/pdf',
     'EtiquetaEmbarqueController::pdf/$1',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 $routes->get(
     'logistica/etiqueta/(:num)/eliminar',
     'EtiquetaEmbarqueController::eliminar/$1',
-    ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']
+    ['filter' => 'auth']
 );
 
 /* --------------------------------------------------------------------
  * FACTURA DEMO (Preview HTML + PDF por GET usando sesión)
  * ------------------------------------------------------------------*/
-$routes->get('logistica/factura', 'FacturaDemoController::preview', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
-$routes->get('logistica/factura/(:num)', 'FacturaDemoController::preview/$1', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
-$routes->get('logistica/factura/(:num)/pdf', 'FacturaDemoController::pdf/$1', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad']);
+$routes->get('logistica/factura', 'FacturaDemoController::preview', ['filter' => 'auth']);
+$routes->get('logistica/factura/(:num)', 'FacturaDemoController::preview/$1', ['filter' => 'auth']);
+$routes->get('logistica/factura/(:num)/pdf', 'FacturaDemoController::pdf/$1', ['filter' => 'auth']);
 
 /* --------------------------------------------------------------------
  * (Opcional) Endpoints POST para facturación
  * ------------------------------------------------------------------*/
-$routes->group('facturacion', ['filter' => 'auth:Administrador,Jefe,Envios,Almacenista,Calidad'], static function ($r) {
+$routes->group('facturacion', ['filter' => 'auth'], static function ($r) {
     // Espacio para futuras rutas POST
     // $r->post('demo/html', 'FacturaDemoController::html');
     // $r->post('demo/pdf',  'FacturaDemoController::pdfPost');
@@ -800,7 +804,7 @@ $routes->get('pedidos-clientes/descargar-pdf/(:num)', 'PedidosClientesController
 /* --------------------------------------------------------------------
  * Pagos de Empleados (endpoints auxiliares)
  * ------------------------------------------------------------------*/
-$routes->group('modulo1/pagos', ['filter' => 'auth:Administrador,Jefe,RH'], static function ($r) {
+$routes->group('modulo1/pagos', ['filter' => 'auth'], static function ($r) {
     $r->get('empleado/(:num)', 'PagosController::getEmpleado/$1');
     $r->post('actualizar-forma-pago', 'PagosController::actualizarFormaPago');
     $r->post('guardar-tarifa', 'PagosController::guardarTarifa');
@@ -808,6 +812,9 @@ $routes->group('modulo1/pagos', ['filter' => 'auth:Administrador,Jefe,RH'], stat
     $r->post('reporte-diario', 'PagosController::reporteDiario');
     $r->get('exportar', 'PagosController::exportar');
 });
+
+// Database fix routes
+$routes->get('db-fix/add-tipo-notificacion', 'DatabaseFixController::addTipoNotificacionColumn');
 
 // Ruta temporal para probar íconos
 $routes->get('test-icons', function () {

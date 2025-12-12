@@ -204,6 +204,10 @@ class EtiquetaEmbarqueController extends BaseController
     // $routes->get('logistica/embarque/(:num)/etiqueta', 'EtiquetaEmbarqueController::show/$1', ...);
     public function show($embarqueId)
     {
+        if (!can('menu.etiquetas_embarque')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $embarqueId = (int) $embarqueId;
         $data = $this->cargarDatos($embarqueId);
 
@@ -215,6 +219,10 @@ class EtiquetaEmbarqueController extends BaseController
      * =======================================================*/
     public function guardar($embarqueId)
     {
+        if (!can('menu.etiquetas_embarque')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Acceso denegado']);
+        }
+        
         $embarqueId = (int) $embarqueId;
 
         $db = $this->db();
@@ -277,6 +285,10 @@ class EtiquetaEmbarqueController extends BaseController
      * =======================================================*/
     public function pdf($id)
     {
+        if (!can('menu.etiquetas_embarque')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $id = (int) $id;
 
         $tablaEt = $this->etiquetaTableOrFail();
@@ -306,6 +318,10 @@ class EtiquetaEmbarqueController extends BaseController
      * =======================================================*/
     public function eliminar($id)
     {
+        if (!can('menu.etiquetas_embarque')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Acceso denegado']);
+        }
+        
         $id = (int) $id;
 
         $db = $this->db();

@@ -44,9 +44,69 @@ class NotificationController extends ResourceController
 
     /**
      * GET /api/notifications
-     * Get recent notifications with read status
+     * Get recent notifications with read status filtered by role permissions
      */
     public function index()
+    {
+        $userData = $this->getCurrentUserData();
+        
+        if (isset($userData['error'])) {
+            return $this->respond([
+                'success' => false,
+                'error' => $userData['error']
+            ], 401);
+        }
+        
+        $limit = $this->request->getVar('limit') ?? 10;
+
+        $notifications = $this->notificationModel->getWithReadStatusFiltered(
+            $userData['maquiladoraId'],
+            $userData['userId'],
+            (int) $limit
+        );
+
+        // Add time ago for each notification
+        foreach ($notifications as &$notification) {
+            $notification['time_ago'] = $this->timeAgo($notification['created_at']);
+        }
+
+        return $this->respond([
+            'success' => true,
+            'data' => $notifications
+        ]);
+    }
+
+    /**
+     * GET /api/notifications/unread-count
+     * Get count of unread notifications filtered by role permissions
+     */
+    public function unreadCount()
+    {
+        $userData = $this->getCurrentUserData();
+        
+        if (isset($userData['error'])) {
+            return $this->respond([
+                'success' => false,
+                'error' => $userData['error']
+            ], 401);
+        }
+
+        $count = $this->notificationModel->getUnreadCountFiltered(
+            $userData['maquiladoraId'],
+            $userData['userId']
+        );
+
+        return $this->respond([
+            'success' => true,
+            'count' => $count
+        ]);
+    }
+
+    /**
+     * GET /api/notifications/all
+     * Get all notifications without filtering (for admin/debug purposes)
+     */
+    public function indexAll()
     {
         $userData = $this->getCurrentUserData();
         
@@ -72,33 +132,8 @@ class NotificationController extends ResourceController
 
         return $this->respond([
             'success' => true,
-            'data' => $notifications
-        ]);
-    }
-
-    /**
-     * GET /api/notifications/unread-count
-     * Get count of unread notifications
-     */
-    public function unreadCount()
-    {
-        $userData = $this->getCurrentUserData();
-        
-        if (isset($userData['error'])) {
-            return $this->respond([
-                'success' => false,
-                'error' => $userData['error']
-            ], 401);
-        }
-
-        $count = $this->notificationModel->getUnreadCount(
-            $userData['maquiladoraId'],
-            $userData['userId']
-        );
-
-        return $this->respond([
-            'success' => true,
-            'count' => $count
+            'data' => $notifications,
+            'filtered' => false
         ]);
     }
 
@@ -175,5 +210,32 @@ class NotificationController extends ResourceController
         } else {
             return date('d/m/Y', $timestamp);
         }
+    }
+
+    /**
+     * GET /api/notifications/permissions
+     * Get current user's notification permissions
+     */
+    public function getUserPermissions()
+    {
+        $userData = $this->getCurrentUserData();
+        
+        if (isset($userData['error'])) {
+            return $this->respond([
+                'success' => false,
+                'error' => $userData['error']
+            ], 401);
+        }
+
+        $permissions = $this->notificationModel->getUserNotificationPermissions(
+            $userData['userId'],
+            $userData['maquiladoraId']
+        );
+
+        return $this->respond([
+            'success' => true,
+            'permissions' => $permissions,
+            'count' => count($permissions)
+        ]);
     }
 }

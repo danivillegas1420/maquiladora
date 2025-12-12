@@ -141,7 +141,7 @@ class Incidencias extends BaseController
 
     public function modal()
     {
-        if (!can('menu.incidencias')) {
+        if (!can('menu.incidencias_modal')) {
             return $this->response->setStatusCode(403)->setJSON(['html' => 'Acceso denegado']);
         }
         

@@ -3987,12 +3987,28 @@ class Modulos extends BaseController
     }
 
     /**
+     * Agregar columna tipo_notificacion a tabla notificaciones si no existe
+     */
+    private function agregarColumnaTipoNotificacionSiNoExiste($db)
+    {
+        if ($db->tableExists('notificaciones')) {
+            // Verificar si la columna ya existe
+            $query = $db->query("SHOW COLUMNS FROM notificaciones LIKE 'tipo_notificacion'");
+            if ($query->getNumRows() == 0) {
+                $sql = "ALTER TABLE notificaciones ADD COLUMN tipo_notificacion VARCHAR(50) NULL AFTER color";
+                $db->query($sql);
+                log_message('info', 'Columna tipo_notificacion agregada a tabla notificaciones');
+            }
+        }
+    }
+
+    /**
      * Vista para gestionar notificaciones por rol
      */
     public function gestion_notificaciones_rol()
     {
         $maquiladoraId = session()->get('maquiladora_id');
-        $rolNotificacionModel = new RolNotificacionModel();
+        $rolNotificacionModel = new \App\Models\RolNotificacionModel();
 
         $roles = $rolNotificacionModel->getRolesWithPermisos($maquiladoraId);
         $tiposNotificacion = $rolNotificacionModel->getTiposNotificacion();
@@ -4027,7 +4043,7 @@ class Modulos extends BaseController
         }
 
         try {
-            $rolNotificacionModel = new RolNotificacionModel();
+            $rolNotificacionModel = new \App\Models\RolNotificacionModel();
             $result = $rolNotificacionModel->savePermisosRol($rolId, $maquiladoraId, $tiposNotificacion);
 
             if ($result) {

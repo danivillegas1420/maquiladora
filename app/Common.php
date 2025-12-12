@@ -48,6 +48,20 @@ if (!function_exists('can')) {
             'menu.roles'                 => ['rh'],
             'menu.usuarios'              => ['rh'],
             'menu.maquiladora'           => ['rh', 'administrador', 'jefe'],
+            // New permissions for all routes with static filters
+            'menu.clientes'              => ['administrador','jefe','empleado','corte','envios','calidad','almacenista','rh','inspector','diseñador'],
+            'menu.incidencias_modal'     => ['administrador','jefe','empleado','almacenista','calidad','inspector','diseñador'],
+            'menu.mantenimiento_inventario' => ['administrador','jefe','almacenista'],
+            'menu.maquinaria_crud'       => ['administrador','jefe','almacenista'],
+            'menu.embarques_crud'        => ['administrador','jefe','envios','almacenista','calidad'],
+            'menu.envios_crud'           => ['administrador','jefe','envios','almacenista','calidad'],
+            'menu.facturacion'           => ['administrador','jefe','envios','almacenista','calidad'],
+            'menu.facturacion_demo'      => ['administrador','jefe','envios','almacenista','calidad'],
+            'menu.modulo1_pagos'         => ['administrador','jefe','rh'],
+            'menu.aduanas'               => ['administrador','jefe','envios','almacenista','calidad'],
+            'menu.etiquetas_embarque'    => ['administrador','jefe','envios','almacenista','calidad'],
+            'menu.calidad_desperdicios'  => ['administrador','jefe','calidad','almacenista','diseñador'],
+            'menu.calidad_reprocesos'    => ['administrador','jefe','calidad','almacenista','diseñador'],
         ];
         if (isset($map[$perm])) {
             $allowed = $map[$perm];

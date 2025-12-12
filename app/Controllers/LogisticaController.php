@@ -363,6 +363,10 @@ class LogisticaController extends BaseController
      * =======================================================*/
     public function gestion()
     {
+        if (!can('menu.envios_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $db = $this->db();
         $session = session();
         $maquiladoraId = $session->get('maquiladora_id')
@@ -484,6 +488,10 @@ class LogisticaController extends BaseController
 
     public function crearEnvio()
     {
+        if (!can('menu.envios_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         if (!$this->tableExists('guia_envio')) {
             return redirect()->back()->with('error', 'La tabla "guia_envio" no existe.');
         }
@@ -539,6 +547,10 @@ class LogisticaController extends BaseController
 
     public function envioJson($id)
     {
+        if (!can('menu.envios_crud')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Acceso denegado']);
+        }
+        
         if (!$this->tableExists('guia_envio')) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Tabla guia_envio no existe']);
         }
@@ -575,6 +587,10 @@ class LogisticaController extends BaseController
 
     public function editarEnvio($id)
     {
+        if (!can('menu.envios_crud')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         if (!$this->tableExists('guia_envio')) {
             return redirect()->back()->with('error', 'La tabla "guia_envio" no existe.');
         }
@@ -754,6 +770,11 @@ class LogisticaController extends BaseController
      * =======================================================*/
     public function documentos()
     {
+        // Check if user has permission to access documentos
+        if (!can('menu.logistica_documentos')) {
+            throw new \CodeIgniter\Exceptions\PageNotFoundException('No tienes permisos para acceder a esta sección');
+        }
+
         $db = $this->db();
         $session = session();
         $maquiladoraId = $session->get('maquiladora_id')
@@ -1332,6 +1353,10 @@ class LogisticaController extends BaseController
     /** Página para capturar/editar datos de facturación del embarque */
     public function facturarUI($embarqueId)
     {
+        if (!can('menu.facturacion')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         return view('modulos/facturar_envio', [
             'embarqueId' => (int) $embarqueId,
             'embarqueFolio' => null,
@@ -1364,6 +1389,10 @@ class LogisticaController extends BaseController
     /** Endpoint que timbra: mock (gratis) o Facturapi si lo configuras */
     public function facturar($embarqueId)
     {
+        if (!can('menu.facturacion')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         try {
             $provider = strtolower((string) (getenv('facturacion.provider') ?: 'mock'));
             $data = $this->request->getJSON(true) ?? $this->request->getPost();

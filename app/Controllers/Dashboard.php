@@ -70,4 +70,13 @@ class Dashboard extends BaseController
 
         return $this->response->setJSON($data);
     }
+    
+    // DEBUG METHOD - Remove after fixing inventory issue
+    public function debugInventory()
+    {
+        $service = new \App\Services\DashboardService();
+        $debug = $service->debugInventario();
+        
+        return $this->response->setJSON($debug);
+    }
 }

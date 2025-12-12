@@ -33,7 +33,7 @@ class Calidad extends BaseController
     /** ===================== LISTA ===================== */
     public function desperdicios()
     {
-        if (!can('menu.desperdicios')) {
+        if (!can('menu.calidad_desperdicios')) {
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
 
@@ -86,7 +86,7 @@ class Calidad extends BaseController
 
     public function guardarDesecho()
     {
-        if (!can('menu.desperdicios')) {
+        if (!can('menu.calidad_desperdicios')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
         }
 
@@ -132,7 +132,7 @@ class Calidad extends BaseController
 
     public function guardarReproceso()
     {
-        if (!can('menu.desperdicios')) {
+        if (!can('menu.calidad_reprocesos')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
         }
 
@@ -174,7 +174,7 @@ class Calidad extends BaseController
 
     public function editarDesecho($id)
     {
-        if (!can('menu.desperdicios')) {
+        if (!can('menu.calidad_desperdicios')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
         }
 
@@ -217,7 +217,7 @@ class Calidad extends BaseController
 
     public function editarReproceso($id)
     {
-        if (!can('menu.desperdicios')) {
+        if (!can('menu.calidad_reprocesos')) {
             return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
         }
 
@@ -350,7 +350,7 @@ class Calidad extends BaseController
 
     public function verDesecho($id)
     {
-        if (!can('menu.desperdicios')) {
+        if (!can('menu.calidad_desperdicios')) {
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
 
@@ -367,7 +367,7 @@ class Calidad extends BaseController
 
     public function verReproceso($id)
     {
-        if (!can('menu.desperdicios')) {
+        if (!can('menu.calidad_reprocesos')) {
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
 

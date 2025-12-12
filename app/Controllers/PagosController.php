@@ -68,6 +68,10 @@ class PagosController extends BaseController
      */
     public function getEmpleado($id)
     {
+        if (!can('menu.modulo1_pagos')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         // Verificar que el usuario esté autenticado
         if (!session()->get('logged_in') && !session()->get('user_id')) {
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'No autorizado']);
@@ -87,6 +91,10 @@ class PagosController extends BaseController
      */
     public function actualizarFormaPago()
     {
+        if (!can('menu.modulo1_pagos')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         // Verificar que el usuario esté autenticado
         if (!session()->get('logged_in') && !session()->get('user_id')) {
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'No autorizado']);
@@ -123,6 +131,10 @@ class PagosController extends BaseController
      */
     public function guardarTarifa()
     {
+        if (!can('menu.modulo1_pagos')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         if (!session()->get('logged_in') && !session()->get('user_id')) {
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'No autorizado']);
         }
@@ -162,6 +174,10 @@ class PagosController extends BaseController
      */
     public function tarifas()
     {
+        if (!can('menu.modulo1_pagos')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         if (!session()->get('logged_in') && !session()->get('user_id')) {
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'No autorizado']);
         }
@@ -184,6 +200,10 @@ class PagosController extends BaseController
      */
     public function reporteDiario()
     {
+        if (!can('menu.modulo1_pagos')) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Acceso denegado']);
+        }
+        
         log_message('debug', 'reporteDiario called');
         if (!session()->get('logged_in') && !session()->get('user_id')) {
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'No autorizado']);
@@ -214,6 +234,10 @@ class PagosController extends BaseController
      */
     public function exportar()
     {
+        if (!can('menu.modulo1_pagos')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         // Verificar que el usuario esté autenticado
         if (!session()->get('logged_in') && !session()->get('user_id')) {
             return redirect()->to('/login')->with('error', 'Debe iniciar sesión');

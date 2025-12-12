@@ -712,11 +712,25 @@
             if (!container || !badge) return;
 
             if (!notifs || notifs.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center p-3">No hay notificaciones nuevas</div>';
+                badge.textContent = '0';
+                badge.classList.remove('bg-danger', 'bg-warning');
+                badge.classList.add('bg-secondary');
                 return;
             }
 
             container.innerHTML = '';
+            
+            // Actualizar badge instantáneamente con color rojo si hay notificaciones
             badge.textContent = notifs.length;
+            badge.classList.remove('bg-secondary', 'bg-primary', 'bg-warning');
+            badge.classList.add('bg-danger');
+            
+            // Agregar animación de pulso al badge
+            badge.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                badge.style.transform = 'scale(1)';
+            }, 300);
 
             notifs.forEach(n => {
                 const date = new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -735,8 +749,78 @@
                 container.innerHTML += html;
             });
         }
+        
+        // --- Real-time notification polling ---
+        let notificationPollingInterval;
+        let lastNotificationCount = 0;
+        
+        function startNotificationPolling() {
+            // Poll cada 30 segundos para nuevas notificaciones
+            notificationPollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('<?= base_url('api/notifications/unread-count') ?>');
+                    if (response.ok) {
+                        const data = await response.json();
+                        const currentCount = data.count || 0;
+                        
+                        // Si hay nuevas notificaciones, actualizar badge instantáneamente
+                        if (currentCount > lastNotificationCount) {
+                            const badge = document.getElementById('notif-badge-count');
+                            if (badge) {
+                                badge.textContent = currentCount;
+                                badge.classList.remove('bg-secondary', 'bg-primary', 'bg-warning');
+                                badge.classList.add('bg-danger');
+                                
+                                // Animación de atención para nuevas notificaciones
+                                badge.style.transform = 'scale(1.3)';
+                                badge.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.7)';
+                                setTimeout(() => {
+                                    badge.style.transform = 'scale(1)';
+                                    badge.style.boxShadow = 'none';
+                                }, 500);
+                            }
+                            
+                            // Opcional: mostrar toast de nueva notificación
+                            if (currentCount > lastNotificationCount && lastNotificationCount > 0) {
+                                showNewNotificationToast();
+                            }
+                        }
+                        
+                        lastNotificationCount = currentCount;
+                    }
+                } catch (error) {
+                    console.error('Error polling notifications:', error);
+                }
+            }, 30000); // 30 segundos
+        }
+        
+        function showNewNotificationToast() {
+            // Crear toast simple para nueva notificación
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed top-0 end-0 p-3';
+            toast.style.zIndex = '9999';
+            toast.innerHTML = `
+                <div class="toast show" role="alert">
+                    <div class="toast-header bg-danger text-white">
+                        <i class="bi bi-bell-fill me-2"></i>
+                        <strong class="me-auto">Nueva Notificación</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        Tienes una nueva notificación en el dashboard.
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            
+            // Remover después de 5 segundos
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
 
         loadDashboardData();
+        startNotificationPolling();
     });
 </script>
 <?= $this->endSection() ?>

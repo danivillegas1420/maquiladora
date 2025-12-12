@@ -813,23 +813,18 @@ function cargarCatalogosTallas() {
                     })).filter(it => it.id_sexo);
                     console.log('Catálogo de sexos cargado:', sexos);
 
+                    // NO mostrar fallback si no hay registros para esta maquiladora
                     if (sexos.length === 0) {
-                        sexos = [
-                            { id_sexo: 'H', nombre: 'Hombre' },
-                            { id_sexo: 'M', nombre: 'Mujer' },
-                            { id_sexo: 'U', nombre: 'Unisex' }
-                        ];
+                        console.log('No hay sexos configurados para esta maquiladora');
+                        // No agregar valores predeterminados
                     }
                     sexosLoaded = true;
                     checkIfLoaded();
                 })
                 .fail(function() {
                     console.error('Error al cargar el catálogo de sexos');
-                    sexos = [
-                        { id_sexo: 'H', nombre: 'Hombre' },
-                        { id_sexo: 'M', nombre: 'Mujer' },
-                        { id_sexo: 'U', nombre: 'Unisex' }
-                    ];
+                    // NO mostrar fallback en caso de error
+                    console.log('No se pudieron cargar los sexos');
                     sexosLoaded = true;
                     checkIfLoaded();
                 });
@@ -850,29 +845,18 @@ function cargarCatalogosTallas() {
                     })).filter(it => it.id_talla);
                     console.log('Catálogo de tallas cargado:', tallas);
 
+                    // NO mostrar fallback si no hay registros para esta maquiladora
                     if (tallas.length === 0) {
-                        tallas = [
-                            { id_talla: 'CH', nombre: 'CH' },
-                            { id_talla: 'M', nombre: 'M' },
-                            { id_talla: 'G', nombre: 'G' },
-                            { id_talla: 'XG', nombre: 'XG' },
-                            { id_talla: 'XXG', nombre: 'XXG' },
-                            { id_talla: '3XG', nombre: '3XG' }
-                        ];
+                        console.log('No hay tallas configuradas para esta maquiladora');
+                        // No agregar valores predeterminados
                     }
                     tallasLoaded = true;
                     checkIfLoaded();
                 })
                 .fail(function() {
                     console.error('Error al cargar el catálogo de tallas');
-                    tallas = [
-                        { id_talla: 'CH', nombre: 'CH' },
-                        { id_talla: 'M', nombre: 'M' },
-                        { id_talla: 'G', nombre: 'G' },
-                        { id_talla: 'XG', nombre: 'XG' },
-                        { id_talla: 'XXG', nombre: 'XXG' },
-                        { id_talla: '3XG', nombre: '3XG' }
-                    ];
+                    // NO mostrar fallback en caso de error
+                    console.log('No se pudieron cargar las tallas');
                     tallasLoaded = true;
                     checkIfLoaded();
                 });
@@ -1711,7 +1695,7 @@ $(document).ready(function () {
             }
 
             if (paSexoCache === null){
-                $.getJSON('<?= base_url('modulo2/catalogos/sexo') ?>' + '?t=' + Date.now())
+                $.getJSON('<?= base_url('modulo2/catalogos/sexo') ?>' + '?t=' + Date.now(), { solo_maquiladora: 1 })
                     .done(function(resp){
                         paSexoCache = Array.isArray(resp?.items) ? resp.items : [];
                         $('#op-tallas-tabla .op-talla-sexo').each(function(){
@@ -1725,7 +1709,7 @@ $(document).ready(function () {
             }
 
             if (paTallasCache === null){
-                $.getJSON('<?= base_url('modulo2/catalogos/tallas') ?>' + '?t=' + Date.now())
+                $.getJSON('<?= base_url('modulo2/catalogos/tallas') ?>' + '?t=' + Date.now(), { solo_maquiladora: 1 })
                     .done(function(resp){
                         paTallasCache = Array.isArray(resp?.items) ? resp.items : [];
                         $('#op-tallas-tabla .op-talla-talla').each(function(){

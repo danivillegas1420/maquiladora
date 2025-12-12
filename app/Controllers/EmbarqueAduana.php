@@ -12,6 +12,10 @@ class EmbarqueAduana extends BaseController
     /** Lista de aduanas de un embarque */
     public function index(int $embarqueId)
     {
+        if (!can('menu.aduanas')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+        
         $db = Database::connect();
 
         // Datos del embarque
@@ -47,6 +51,10 @@ class EmbarqueAduana extends BaseController
     /** API opcional: lista JSON */
     public function listar(int $embarqueId)
     {
+        if (!can('menu.aduanas')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Acceso denegado']);
+        }
+        
         $model   = new EmbarqueAduanaModel();
         $aduanas = $model->where('embarqueId', $embarqueId)->orderBy('id', 'DESC')->findAll();
 
@@ -56,6 +64,10 @@ class EmbarqueAduana extends BaseController
     /** Crear / actualizar una Aduana (AJAX) */
     public function guardar()
     {
+        if (!can('menu.aduanas')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Acceso denegado']);
+        }
+        
         if (!$this->request->is('post')) {
             return $this->response->setStatusCode(405)
                 ->setJSON(['status' => 'error', 'message' => 'Método no permitido']);
@@ -97,6 +109,10 @@ class EmbarqueAduana extends BaseController
     /** Eliminar Aduana (AJAX) */
     public function eliminar()
     {
+        if (!can('menu.aduanas')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Acceso denegado']);
+        }
+        
         if (!$this->request->is('post')) {
             return $this->response->setStatusCode(405)
                 ->setJSON(['status' => 'error', 'message' => 'Método no permitido']);
