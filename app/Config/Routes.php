@@ -488,6 +488,7 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         $routes->get('/', 'ControlBultosController::listar');
         $routes->get('(:num)', 'ControlBultosController::detalle/$1');
         $routes->get('(:num)/progreso', 'ControlBultosController::progreso/$1');
+        $routes->get('(:num)/bultos', 'ControlBultosController::bultos/$1');
         $routes->post('crear', 'ControlBultosController::crear');
         $routes->post('(:num)/editar', 'ControlBultosController::editar/$1');
         $routes->delete('(:num)/eliminar', 'ControlBultosController::eliminar/$1');

@@ -304,11 +304,16 @@
                     <input type="date" class="form-control" id="rend-fecha" name="fecha_registro" required>
                 </div>
 
-                <div class="col-12">
+                <div class="col-md-6">
                     <label class="form-label">Operación</label>
                     <select class="form-select" id="rend-operacion" name="operacionControlId" required>
                         <option value="">Seleccione operación...</option>
                     </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Anota el número de bulto</label>
+                    <input type="text" class="form-control" id="rend-notas" name="notas" placeholder="Ej. Bulto 12">
                 </div>
 
                 <div class="col-md-6">
@@ -331,11 +336,6 @@
                     <select class="form-select" id="rend-talla" name="talla_info">
                         <option value="">General (sin talla específica)</option>
                     </select>
-                </div>
-
-                <div class="col-12">
-                    <label class="form-label">Notas (opcional)</label>
-                    <textarea class="form-control" id="rend-notas" name="notas" rows="2" placeholder="Comentarios sobre la producción..."></textarea>
                 </div>
 
                 <!-- Información del empleado (oculto) -->
@@ -706,19 +706,51 @@
     // Función para cargar operaciones disponibles para rendimiento
     function cargarOperacionesParaRendimiento(opId) {
         const selectOperacion = document.getElementById('rend-operacion');
-        selectOperacion.innerHTML = '<option value=""><div class="spinner-border spinner-border-sm text-primary me-2" role="status"><span class="visually-hidden">Cargando...</span></div>Cargando operaciones...</option>';
+        selectOperacion.innerHTML = '<option value="">Cargando operaciones...</option>';
         
         // Buscar controles de bultos para esta OP
-        fetch(`<?= base_url('modulo3/api/control-bultos/por-op/') ?>${opId}`, {
+        const url = `<?= base_url('modulo3/api/control-bultos/por-op/') ?>${opId}`;
+        fetch(url, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(r => r.json())
+        .then(r => {
+            return r.text().then(text => {
+                let parsed = null;
+                try {
+                    parsed = JSON.parse(text);
+                } catch (e) {
+                    parsed = null;
+                }
+                return { ok: r.ok, status: r.status, text, json: parsed };
+            });
+        })
         .then(data => {
             selectOperacion.innerHTML = '<option value="">Seleccione operación...</option>';
-            
-            if (data.ok && data.data && data.data.length > 0) {
+
+            if (!data.ok) {
+                console.error('Error HTTP al cargar operaciones:', { url, status: data.status, body: data.text });
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Error al cargar operaciones';
+                option.disabled = true;
+                selectOperacion.appendChild(option);
+                return;
+            }
+
+            const payload = data.json;
+            if (!payload || typeof payload !== 'object') {
+                console.error('Respuesta no JSON al cargar operaciones:', { url, status: data.status, body: data.text });
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Error al cargar operaciones';
+                option.disabled = true;
+                selectOperacion.appendChild(option);
+                return;
+            }
+
+            if (payload.ok && payload.data && payload.data.length > 0) {
                 // Agrupar operaciones por control de bultos
-                data.data.forEach(control => {
+                payload.data.forEach(control => {
                     if (control.operaciones && control.operaciones.length > 0) {
                         // Crear grupo para este control
                         const optgroup = document.createElement('optgroup');

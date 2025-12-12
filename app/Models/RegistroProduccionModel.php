@@ -94,10 +94,8 @@ class RegistroProduccionModel extends Model
     public function getRegistrosPorOperacion($operacionId)
     {
         return $this->db->table($this->table . ' rp')
-            ->select('rp.*, e.nombre as empleadoNombre, e.apellido as empleadoApellido, 
-                      u.nombre as registradoPorNombre')
+            ->select('rp.*, e.nombre as empleadoNombre, e.apellido as empleadoApellido')
             ->join('empleado e', 'e.id = rp.empleadoId', 'left')
-            ->join('usuario u', 'u.id = rp.registrado_por', 'left')
             ->where('rp.operacionControlId', $operacionId)
             ->orderBy('rp.fecha_registro', 'DESC')
             ->orderBy('rp.created_at', 'DESC')
@@ -124,10 +122,9 @@ class RegistroProduccionModel extends Model
     {
         return $this->db->table($this->table . ' rp')
             ->select('rp.*, e.nombre as empleadoNombre, e.apellido as empleadoApellido,
-                      oc.nombre_operacion, u.nombre as registradoPorNombre')
+                      oc.nombre_operacion')
             ->join('operaciones_control oc', 'oc.id = rp.operacionControlId', 'left')
             ->join('empleado e', 'e.id = rp.empleadoId', 'left')
-            ->join('usuario u', 'u.id = rp.registrado_por', 'left')
             ->where('oc.controlBultoId', $controlId)
             ->orderBy('rp.fecha_registro', 'DESC')
             ->orderBy('rp.created_at', 'DESC')

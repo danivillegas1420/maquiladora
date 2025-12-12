@@ -126,6 +126,7 @@ class ControlBultosController extends BaseController
             $horaInicio = $this->request->getPost('hora_inicio');
             $horaFin = $this->request->getPost('hora_fin');
             $notas = $this->request->getPost('notas');
+            $tallaInfo = trim((string) $this->request->getPost('talla_info'));
 
             // Validaciones básicas
             if (!$ordenProduccionId || !$operacionControlId || !$empleadoId || !$cantidad || !$fechaRegistro) {
@@ -195,6 +196,9 @@ class ControlBultosController extends BaseController
             $resultado = $this->registrarProduccionIndividual($operacionControlId, $datosProduccion);
 
             if ($resultado['success']) {
+                if ($tallaInfo !== '') {
+                    $this->aplicarCantidadATallaEnBultos((int) $operacion['controlBultoId'], (int) $operacionControlId, (int) $empleadoId, (int) $cantidad, $tallaInfo);
+                }
                 return $this->response->setJSON([
                     'ok' => true,
                     'message' => 'Rendimiento registrado correctamente',
@@ -219,6 +223,128 @@ class ControlBultosController extends BaseController
                 'ok' => false,
                 'message' => 'Error interno del servidor'
             ]);
+        }
+    }
+
+    private function aplicarCantidadATallaEnBultos(int $controlBultoId, int $operacionControlId, int $empleadoId, int $cantidad, string $tallaKey): void
+    {
+        if ($cantidad <= 0 || $tallaKey === '') {
+            return;
+        }
+
+        try {
+            // Si aún no existen bultos, crear 1 bulto por talla según pedido_tallas_detalle.
+            // Esto evita que el progreso por talla se "divida" por prorrateo.
+            $totalBultos = (int) $this->db->table('bultos')
+                ->where('controlBultoId', $controlBultoId)
+                ->countAllResults();
+
+            if ($totalBultos === 0) {
+                $controlRow = $this->db->table('control_bultos')
+                    ->select('ordenProduccionId')
+                    ->where('id', $controlBultoId)
+                    ->get()
+                    ->getRowArray();
+
+                $ordenProduccionId = (int) ($controlRow['ordenProduccionId'] ?? 0);
+                if ($ordenProduccionId > 0) {
+                    try {
+                        $tallas = $this->db->query(
+                            "SELECT ptd.cantidad, t.nombre AS nombre_talla\n" .
+                            "FROM pedido_tallas_detalle ptd\n" .
+                            "LEFT JOIN tallas t ON t.id_talla = ptd.id_talla\n" .
+                            "WHERE ptd.ordenProduccionId = ?",
+                            [$ordenProduccionId]
+                        )->getResultArray();
+
+                        $num = 1;
+                        foreach ($tallas as $t) {
+                            $nombreTalla = trim((string) ($t['nombre_talla'] ?? ''));
+                            $cantTalla = (int) ($t['cantidad'] ?? 0);
+                            if ($nombreTalla === '' || $cantTalla <= 0) {
+                                continue;
+                            }
+                            $this->db->table('bultos')->insert([
+                                'controlBultoId' => $controlBultoId,
+                                'numero_bulto' => (string) $num,
+                                'talla' => $nombreTalla,
+                                'cantidad' => $cantTalla,
+                                'observaciones' => null,
+                                'created_at' => date('Y-m-d H:i:s'),
+                                'updated_at' => date('Y-m-d H:i:s'),
+                            ]);
+                            $num++;
+                        }
+                    } catch (\Throwable $e) {
+                        // si falla, seguimos sin bloquear registro
+                    }
+                }
+            }
+
+            $bultos = $this->db->table('bultos')
+                ->select('id, cantidad')
+                ->where('controlBultoId', $controlBultoId)
+                ->where('talla', $tallaKey)
+                ->orderBy('numero_bulto', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            if (empty($bultos)) {
+                return;
+            }
+
+            $this->db->transStart();
+
+            $restante = $cantidad;
+            foreach ($bultos as $b) {
+                if ($restante <= 0) {
+                    break;
+                }
+
+                $bultoId = (int) ($b['id'] ?? 0);
+                $capacidadTotal = (int) ($b['cantidad'] ?? 0);
+                if ($bultoId <= 0 || $capacidadTotal <= 0) {
+                    continue;
+                }
+
+                $row = $this->db->table('progreso_bulto_operacion')
+                    ->where('bultoId', $bultoId)
+                    ->where('operacionControlId', $operacionControlId)
+                    ->get()
+                    ->getRowArray();
+
+                $actual = (int) ($row['cantidad_completada'] ?? 0);
+                $disponible = max(0, $capacidadTotal - $actual);
+                if ($disponible <= 0) {
+                    continue;
+                }
+
+                $agregar = min($restante, $disponible);
+                $nuevo = $actual + $agregar;
+                $completado = $nuevo >= $capacidadTotal ? 1 : 0;
+                $payload = [
+                    'bultoId' => $bultoId,
+                    'operacionControlId' => $operacionControlId,
+                    'completado' => $completado,
+                    'cantidad_completada' => $nuevo,
+                    'empleadoId' => $empleadoId,
+                    'fecha_completado' => date('Y-m-d H:i:s'),
+                ];
+
+                if ($row) {
+                    $this->db->table('progreso_bulto_operacion')
+                        ->where('id', $row['id'])
+                        ->update($payload);
+                } else {
+                    $this->db->table('progreso_bulto_operacion')->insert($payload);
+                }
+
+                $restante -= $agregar;
+            }
+
+            $this->db->transComplete();
+        } catch (\Throwable $e) {
+            // silencioso: no bloquea el registro principal
         }
     }
 
@@ -324,7 +450,10 @@ class ControlBultosController extends BaseController
     public function progreso($id)
     {
         try {
-            if (!can('menu.inspeccion')) {
+            $roleName = function_exists('current_role_name') ? (string) current_role_name() : '';
+            $roleNorm = mb_strtolower(trim($roleName));
+            $permitido = can('menu.inspeccion') || can('menu.produccion') || $roleNorm === 'corte';
+            if (!$permitido) {
                 return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
             }
 
@@ -442,8 +571,10 @@ class ControlBultosController extends BaseController
 
                         $completadasReal = (int) ($completadasPorTallaOperacion[$tallaKey][(string) $opId] ?? 0);
 
-                        // Fallback: prorratear del total completado
-                        if ($bultosExistentes === 0 || $completadasReal === 0) {
+                        // Fallback: prorratear del total completado SOLO cuando no existen bultos.
+                        // Si existen bultos, el progreso por talla debe salir únicamente de progreso_bulto_operacion
+                        // para evitar "dividir" la producción registrada entre tallas.
+                        if ($bultosExistentes === 0) {
                             $piezasCompTotal = (int) ($op['piezas_completadas'] ?? 0);
                             $completadasReal = $totalCantidadTallas > 0
                                 ? (int) round(($piezasCompTotal * $cantidadTalla) / $totalCantidadTallas)
@@ -465,6 +596,7 @@ class ControlBultosController extends BaseController
 
                     $progresoPorTalla[] = [
                         'titulo' => $titulo,
+                        'talla_key' => $nombreTalla,
                         'cantidad' => $cantidadTalla,
                         'operaciones' => $ops,
                     ];
@@ -770,13 +902,21 @@ class ControlBultosController extends BaseController
      */
     public function registrosProduccion($controlId)
     {
-        $registroModel = new RegistroProduccionModel();
-        $registros = $registroModel->getRegistrosPorControl($controlId);
+        try {
+            $registroModel = new RegistroProduccionModel();
+            $registros = $registroModel->getRegistrosPorControl($controlId);
 
-        return $this->response->setJSON([
-            'ok' => true,
-            'data' => $registros
-        ]);
+            return $this->response->setJSON([
+                'ok' => true,
+                'data' => $registros
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok' => false,
+                'message' => 'Error obteniendo registros de producción',
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     public function resumenProduccionOperacion($operacionId)
@@ -798,6 +938,36 @@ class ControlBultosController extends BaseController
             'data' => $resumen,
             'total' => $total
         ]);
+    }
+
+    public function bultos($id)
+    {
+        try {
+            $roleName = function_exists('current_role_name') ? (string) current_role_name() : '';
+            $roleNorm = mb_strtolower(trim($roleName));
+            $permitido = can('menu.inspeccion') || can('menu.produccion') || $roleNorm === 'corte';
+            if (!$permitido) {
+                return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+            }
+
+            $rows = $this->db->table('bultos')
+                ->select('id, numero_bulto, talla, cantidad')
+                ->where('controlBultoId', (int) $id)
+                ->orderBy('numero_bulto', 'ASC')
+                ->get()
+                ->getResultArray();
+
+            return $this->response->setJSON([
+                'ok' => true,
+                'data' => $rows,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok' => false,
+                'message' => 'Error al cargar bultos',
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -1077,6 +1247,21 @@ class ControlBultosController extends BaseController
         $horaInicio = $this->request->getPost('hora_inicio');
         $horaFin = $this->request->getPost('hora_fin');
         $observaciones = $this->request->getPost('observaciones');
+
+        if (empty($observaciones) && !empty($bultoId)) {
+            try {
+                $b = $this->db->table('bultos')
+                    ->select('numero_bulto')
+                    ->where('id', (int) $bultoId)
+                    ->get()
+                    ->getRowArray();
+                if ($b && isset($b['numero_bulto']) && $b['numero_bulto'] !== '') {
+                    $observaciones = 'Bulto ' . $b['numero_bulto'];
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
 
         // Validaciones
         if (empty($operacionControlId) || empty($empleadoId) || empty($cantidadProducida)) {

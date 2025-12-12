@@ -149,6 +149,29 @@
     </div>
 </div>
 
+<!-- Modal Bitácora por Bulto -->
+<div class="modal fade" id="modalBitacoraBulto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bitacoraTitulo">Bitácora</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <span class="badge bg-secondary" id="bitacoraBultoBadge"></span>
+                </div>
+                <div id="bitacoraLoading" class="text-muted">Cargando...</div>
+                <div id="bitacoraEmpty" class="text-muted" style="display:none;">Sin registros para este bulto.</div>
+                <div id="bitacoraContent" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="matriz-container">
     <div class="matriz-header">
         <h4 class="mb-2">Orden #<?= esc($control['ordenFolio']) ?></h4>
@@ -237,7 +260,15 @@
             <tbody>
                 <?php foreach ($bultos as $bulto): ?>
                     <tr>
-                        <td class="info-cell"><?= esc($bulto['numero_bulto']) ?></td>
+                        <td class="info-cell">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <span><?= esc($bulto['numero_bulto']) ?></span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary btn-bitacora-bulto" 
+                                    data-bulto-numero="<?= esc($bulto['numero_bulto']) ?>" title="Ver bitácora">
+                                    <i class="fas fa-list"></i>
+                                </button>
+                            </div>
+                        </td>
                         <td><?= esc($bulto['talla']) ?></td>
                         <td><?= esc($bulto['cantidad']) ?></td>
                         <?php foreach ($operaciones as $op): ?>
@@ -366,6 +397,8 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function () {
+        const __controlId = <?= (int) ($control['id'] ?? 0) ?>;
+
         // Abrir modal al hacer clic en botón de registrar
         $('.btn-registrar-bulto').click(function () {
             const bultoId = $(this).data('bulto-id');
@@ -391,6 +424,80 @@
 
             // Mostrar modal
             $('#modalRegistroProduccion').modal('show');
+        });
+
+        // Abrir bitácora por bulto
+        $(document).on('click', '.btn-bitacora-bulto', function () {
+            const bultoNumero = String($(this).data('bulto-numero') || '').trim();
+            if (!bultoNumero) return;
+
+            $('#bitacoraTitulo').text('Bitácora - Bulto ' + bultoNumero);
+            $('#bitacoraBultoBadge').text('Bulto ' + bultoNumero);
+            $('#bitacoraLoading').show();
+            $('#bitacoraEmpty').hide();
+            $('#bitacoraContent').hide().empty();
+
+            $('#modalBitacoraBulto').modal('show');
+
+            fetch(`<?= base_url('modulo3/api/control-bultos') ?>/${__controlId}/registros-produccion`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(resp => {
+                $('#bitacoraLoading').hide();
+
+                if (!resp || !resp.ok || !Array.isArray(resp.data)) {
+                    $('#bitacoraEmpty').show();
+                    return;
+                }
+
+                const needle = ('bulto ' + bultoNumero).toLowerCase();
+                const filtrados = resp.data.filter(row => {
+                    const obs = String(row.observaciones || '').toLowerCase();
+                    return obs.includes(needle);
+                });
+
+                if (filtrados.length === 0) {
+                    $('#bitacoraEmpty').show();
+                    return;
+                }
+
+                const porOp = {};
+                filtrados.forEach(r => {
+                    const opNombre = String(r.nombre_operacion || 'Operación');
+                    if (!porOp[opNombre]) porOp[opNombre] = [];
+                    porOp[opNombre].push(r);
+                });
+
+                const ops = Object.keys(porOp);
+                let html = '';
+                ops.forEach(opNombre => {
+                    html += '<div class="card mb-3">';
+                    html +=   '<div class="card-header d-flex align-items-center justify-content-between">';
+                    html +=     '<strong>' + opNombre + '</strong>';
+                    html +=   '</div>';
+                    html +=   '<div class="card-body p-0">';
+                    html +=     '<table class="table table-sm mb-0">';
+                    html +=       '<thead><tr><th>Empleado</th><th class="text-end">Cantidad</th></tr></thead>';
+                    html +=       '<tbody>';
+                    porOp[opNombre].forEach(x => {
+                        const emp = (String(x.empleadoNombre || '') + ' ' + String(x.empleadoApellido || '')).trim() || ('ID ' + (x.empleadoId || ''));
+                        const cant = parseInt(x.cantidad_producida || 0) || 0;
+                        html += '<tr><td>' + emp + '</td><td class="text-end">' + cant + '</td></tr>';
+                    });
+                    html +=       '</tbody>';
+                    html +=     '</table>';
+                    html +=   '</div>';
+                    html += '</div>';
+                });
+
+                $('#bitacoraContent').html(html).show();
+            })
+            .catch(err => {
+                console.error('Error cargando bitácora:', err);
+                $('#bitacoraLoading').hide();
+                $('#bitacoraEmpty').show();
+            });
         });
 
         // Guardar registro de producción

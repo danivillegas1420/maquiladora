@@ -49,6 +49,92 @@
     #tablaEmpleadosCantidad td:nth-child(4) {
         display: none;
     }
+
+    .matriz-bitacora-wrap {
+        overflow: auto;
+        max-height: 70vh;
+        border: 1px solid #cfcfcf;
+        border-radius: 6px;
+        background: #ffffff;
+    }
+
+    .matriz-bitacora {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .matriz-bitacora th,
+    .matriz-bitacora td {
+        border: 1px solid #d6d6d6;
+        padding: 6px 8px;
+        vertical-align: top;
+        word-wrap: break-word;
+        color: #212529;
+        font-size: 12px;
+    }
+
+    .matriz-bitacora thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: #f1f3f5;
+        color: #212529;
+        text-align: center;
+    }
+
+    .matriz-bitacora .op-col {
+        position: sticky;
+        left: 0;
+        z-index: 6;
+        background: #f1f3f5;
+        color: #212529;
+        width: 260px;
+        min-width: 260px;
+        max-width: 260px;
+    }
+
+    .matriz-bitacora td {
+        min-width: 140px;
+        height: 74px;
+    }
+
+    .matriz-cell-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 11px;
+        line-height: 1.2;
+        padding: 1px 0;
+    }
+
+    .matriz-cell-item .emp {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 120px;
+    }
+
+    .matriz-cell-item .qty {
+        font-weight: 600;
+    }
+
+    .matriz-col-head {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        line-height: 1.1;
+    }
+
+    .matriz-col-head .num {
+        font-weight: 700;
+    }
+
+    .matriz-col-head .meta {
+        font-size: 10px;
+        color: #6c757d;
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -458,6 +544,27 @@
     </div>
 </div>
 
+<!-- Modal Bitácora (Vista Matriz) -->
+<div class="modal fade" id="modalBitacoraMatriz" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bitacoraMatrizTitulo">Vista Matriz - Bitácora</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="bitacoraMatrizLoading" class="text-muted">Cargando...</div>
+                <div id="bitacoraMatrizEmpty" class="text-muted" style="display:none;">Sin registros.</div>
+                <div id="bitacoraMatrizContent" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <a href="#" class="btn btn-primary" id="btnIrMatriz" target="_blank" style="display:none;">Ir a Vista Matriz</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -673,7 +780,7 @@
                     render: function (data, type, row) {
                         // Calcular progreso real si está disponible, sino 0
                         let progreso = row.progreso_general || 0;
-                        return `<div class="progress"><div class="progress-bar bg-info" role="progressbar" style="width: ${progreso}%">${progreso}%</div></div>`;
+                        return `<div class="progress"><div class="progress-bar bg-info" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div></div>`;
                     }
                 },
                 {
@@ -697,7 +804,7 @@
                     render: function (data) {
                         return `
                             <button class="btn btn-sm btn-info text-white btn-ver" data-id="${data.id}" title="Ver Detalles"><i class="fas fa-eye"></i></button>
-                            <a href="<?= base_url('modulo3/control-bultos') ?>/${data.id}/matriz" class="btn btn-sm btn-success" title="Vista Matriz"><i class="fas fa-th"></i></a>
+                            <button class="btn btn-sm btn-success btn-matriz-bitacora" data-id="${data.id}" title="Vista Matriz"><i class="fas fa-th"></i></button>
                             <button class="btn btn-sm btn-warning text-white btn-editar" data-id="${data.id}" title="Editar"><i class="fas fa-edit"></i></button>
                             <button class="btn btn-sm btn-danger btn-eliminar" data-id="${data.id}" title="Eliminar"><i class="fas fa-trash"></i></button>
                         `;
@@ -902,6 +1009,142 @@
             cargarDetalleControl(id);
         });
 
+        // Abrir Bitácora desde botón "Vista Matriz" (columna Acciones)
+        $('#tablaControles tbody').on('click', '.btn-matriz-bitacora', function () {
+            const controlId = $(this).data('id');
+            if (!controlId) return;
+
+            function fetchJsonSafe(url) {
+                return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(async (r) => {
+                        const ct = (r.headers.get('content-type') || '').toLowerCase();
+                        if (!ct.includes('application/json')) {
+                            const raw = await r.text().catch(() => '');
+                            return { ok: false, status: r.status, message: 'Respuesta no JSON', raw: raw.slice(0, 250) };
+                        }
+                        try {
+                            const json = await r.json();
+                            if (typeof json === 'object' && json !== null) {
+                                return json;
+                            }
+                            return { ok: false, status: r.status, message: 'Respuesta JSON inválida' };
+                        } catch (e) {
+                            return { ok: false, message: 'Error parseando JSON', error: e.message };
+                        }
+                    })
+                    .catch((e) => ({ ok: false, message: 'Error de red', error: e.message }));
+            }
+
+            $('#bitacoraMatrizTitulo').text('Vista Matriz - Bitácora (Control #' + controlId + ')');
+            $('#bitacoraMatrizLoading').show();
+            $('#bitacoraMatrizEmpty').hide();
+            $('#bitacoraMatrizContent').hide().empty();
+            $('#btnIrMatriz').hide().attr('href', `<?= base_url('modulo3/control-bultos') ?>/${controlId}/matriz`);
+            $('#modalBitacoraMatriz').modal('show');
+
+            const pReg = fetchJsonSafe(`<?= base_url('modulo3/api/control-bultos') ?>/${controlId}/registros-produccion`);
+            const pBul = fetchJsonSafe(`<?= base_url('modulo3/api/control-bultos') ?>/${controlId}/bultos`);
+            const pProg = fetchJsonSafe(`<?= base_url('modulo3/api/control-bultos') ?>/${controlId}/progreso`);
+
+            Promise.all([pReg, pBul, pProg])
+                .then(([respReg, respBul, respProg]) => {
+                    $('#bitacoraMatrizLoading').hide();
+
+                    const bulOk = respBul && respBul.ok;
+                    const progOk = respProg && respProg.ok;
+                    const regOk = respReg && respReg.ok;
+
+                    if (!bulOk || !progOk || !regOk) {
+                        const parts = [];
+                        if (!bulOk) parts.push('Bultos: ' + (respBul?.message || respBul?.error || respBul?.raw || 'Error'));
+                        if (!progOk) parts.push('Operaciones: ' + (respProg?.message || respProg?.error || respProg?.raw || 'Error'));
+                        if (!regOk) parts.push('Registros: ' + (respReg?.message || respReg?.error || respReg?.raw || 'Error'));
+                        $('#bitacoraMatrizEmpty').text(parts.join(' | ') || 'No se pudo cargar la información.').show();
+                        return;
+                    }
+
+                    const bultos = Array.isArray(respBul.data) ? respBul.data : [];
+                    const operaciones = (respProg.data && Array.isArray(respProg.data.operaciones)) ? respProg.data.operaciones : [];
+                    const registros = Array.isArray(respReg.data) ? respReg.data : [];
+
+                    if (bultos.length === 0) {
+                        $('#bitacoraMatrizEmpty').text('No hay bultos creados para este control.').show();
+                        $('#btnIrMatriz').show();
+                        return;
+                    }
+
+                    if (operaciones.length === 0) {
+                        $('#bitacoraMatrizEmpty').text('No hay operaciones configuradas para este control.').show();
+                        return;
+                    }
+
+                    const bultoCols = bultos.map(b => ({
+                        numero: String(b.numero_bulto || '').trim(),
+                        talla: String(b.talla || '').trim(),
+                        cantidad: String(b.cantidad ?? '').trim(),
+                    })).filter(b => b.numero !== '');
+
+                    // index[opNombre][bultoNumero][empleado] = total
+                    const index = {};
+                    registros.forEach(r => {
+                        const opNombre = String(r.nombre_operacion || '').trim();
+                        const obs = String(r.observaciones || '').trim();
+                        const m = obs.match(/bulto\s*(\d+)/i);
+                        if (!opNombre || !m) return;
+                        const bNum = String(m[1] || '').padStart(3, '0');
+                        const emp = (String(r.empleadoNombre || '') + ' ' + String(r.empleadoApellido || '')).trim() || ('ID ' + (r.empleadoId || ''));
+                        const cant = parseInt(r.cantidad_producida || 0) || 0;
+                        if (!index[opNombre]) index[opNombre] = {};
+                        if (!index[opNombre][bNum]) index[opNombre][bNum] = {};
+                        if (!index[opNombre][bNum][emp]) index[opNombre][bNum][emp] = 0;
+                        index[opNombre][bNum][emp] += cant;
+                    });
+
+                    let html = '<div class="matriz-bitacora-wrap">';
+                    html += '<table class="matriz-bitacora">';
+                    html += '<thead><tr>';
+                    html += '<th class="op-col">Operación</th>';
+                    bultoCols.forEach(b => {
+                        const meta = (b.talla || b.cantidad) ? `${b.talla || ''}${(b.talla && b.cantidad) ? ' · ' : ''}${b.cantidad || ''}` : '';
+                        html += '<th><div class="matriz-col-head"><div class="num">' + b.numero + '</div>' + (meta ? '<div class="meta">' + meta + '</div>' : '') + '</div></th>';
+                    });
+                    html += '</tr></thead>';
+                    html += '<tbody>';
+
+                    operaciones.forEach(op => {
+                        const opNombre = String(op.nombre_operacion || op.nombre || '').trim() || '---';
+                        html += '<tr>';
+                        html += '<td class="op-col">' + opNombre + '</td>';
+                        bultoCols.forEach(b => {
+                            const cell = (index[opNombre] && index[opNombre][b.numero]) ? index[opNombre][b.numero] : null;
+                            if (!cell) {
+                                html += '<td></td>';
+                                return;
+                            }
+                            const empleados = Object.keys(cell);
+                            let cellHtml = '';
+                            empleados.forEach(emp => {
+                                cellHtml += '<div class="matriz-cell-item"><span class="emp">' + emp + '</span><span class="qty">' + cell[emp] + '</span></div>';
+                            });
+                            html += '<td>' + cellHtml + '</td>';
+                        });
+
+                        html += '</tr>';
+                    });
+
+                    html += '</tbody></table></div>';
+                    $('#bitacoraMatrizContent').html(html).show();
+                    if (registros.length === 0) {
+                        $('#bitacoraMatrizEmpty').text('Sin registros de producción aún (se muestra la matriz vacía).').show();
+                    }
+                })
+                .catch(err => {
+                    console.error('Error cargando bitácora:', err);
+                    $('#bitacoraMatrizLoading').hide();
+                    $('#bitacoraMatrizEmpty').text('No se pudo cargar la bitácora: ' + (err?.message || err)).show();
+                });
+        });
+
         // Editar Control
         $('#tablaControles tbody').on('click', '.btn-editar', function () {
             const id = $(this).data('id');
@@ -993,101 +1236,59 @@
                     
                     if (response.ok) {
                         const data = response.data;
-                        
+
                         // Extraer empleados específicos de la orden de producción desde la respuesta
                         empleadosOrden = data.empleados || [];
-                        
-                        // Mostrar tallas si el control tiene múltiples tallas
+
+                        // Mostrar tallas del pedido si el control tiene múltiples tallas
                         if (data.con_tallas && data.tallas && data.tallas.length > 0) {
                             mostrarTallasEnDetalle(data.tallas);
                         } else {
                             ocultarTallasEnDetalle();
                         }
-                        
+
                         // Actualizar cabecera del modal
                         $('#detalleOrden').text(data.orden || '---');
                         $('#detalleEstilo').text(data.estilo || '---');
                         $('#detalleEstado').html(`<span class="badge bg-secondary">${data.estado || 'Desconocido'}</span>`);
                         $('#regControlId').val(id);
 
-                        // Cargar operaciones en la tabla
+                        // Cargar operaciones en la tabla (una sola tabla)
                         const tbodyOperaciones = $('#tablaOperaciones tbody');
                         tbodyOperaciones.empty();
 
-                        if (data.con_tallas && Array.isArray(data.progreso_por_talla) && data.progreso_por_talla.length > 0) {
-                            data.progreso_por_talla.forEach(grupo => {
-                                const titulo = grupo.titulo || 'Talla';
-                                const cantidadTalla = parseInt(grupo.cantidad || 0) || 0;
+                        (data.operaciones || []).forEach(op => {
+                            const progreso = op.porcentaje_completado || 0;
+                            const row = `
+                                <tr>
+                                    <td>${op.nombre_operacion}</td>
+                                    <td>${op.es_componente == 1 ? '<span class="badge bg-info">Componente</span>' : '<span class="badge bg-primary">Armado</span>'}</td>
+                                    <td>${op.piezas_requeridas || 0}</td>
+                                    <td>${op.piezas_completadas || 0}</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-success btn-op-registrar" 
+                                                data-id="${op.id}"
+                                                title="Registrar producción para esta operación">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                            tbodyOperaciones.append(row);
+                        });
 
-                                tbodyOperaciones.append(`
-                                    <tr class="table-secondary">
-                                        <td colspan="6"><strong>${titulo}</strong> &nbsp; <span class="text-muted">(Cantidad: ${cantidadTalla})</span></td>
-                                    </tr>
-                                `);
-
-                                const ops = Array.isArray(grupo.operaciones) ? grupo.operaciones : [];
-                                ops.forEach(op => {
-                                    const progreso = op.porcentaje_completado || 0;
-                                    const row = `
-                                        <tr>
-                                            <td>${op.nombre_operacion}</td>
-                                            <td>${op.es_componente == 1 ? '<span class="badge bg-info">Componente</span>' : '<span class="badge bg-primary">Armado</span>'}</td>
-                                            <td>${op.piezas_requeridas || 0}</td>
-                                            <td>${op.piezas_completadas || 0}</td>
-                                            <td>
-                                                <div class="progress">
-                                                    <div class="progress-bar" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div>
-                                                </div>
-                                            </td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-outline-success btn-op-registrar" 
-                                                        data-id="${op.id}"
-                                                        title="Registrar producción para esta operación">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                    tbodyOperaciones.append(row);
-                                });
-                            });
-                        } else {
-                            data.operaciones.forEach(op => {
-                                const progreso = op.porcentaje_completado || 0;
-
-                                const row = `
-                                    <tr>
-                                        <td>${op.nombre_operacion}</td>
-                                        <td>${op.es_componente == 1 ? '<span class="badge bg-info">Componente</span>' : '<span class="badge bg-primary">Armado</span>'}</td>
-                                        <td>${op.piezas_requeridas || 0}</td>
-                                        <td>${op.piezas_completadas || 0}</td>
-                                        <td>
-                                            <div class="progress">
-                                                <div class="progress-bar" role="progressbar" style="width: ${progreso}%" aria-valuenow="${progreso}" aria-valuemin="0" aria-valuemax="100">${progreso}%</div>
-                                            </div>
-                                        </td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-sm btn-outline-success btn-op-registrar" 
-                                                    data-id="${op.id}"
-                                                    title="Registrar producción para esta operación">
-                                                <i class="fas fa-plus"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                                tbodyOperaciones.append(row);
-                            });
-                        }
-                        
                         // Poblar select de operaciones (solo operaciones no completadas)
                         const selectOperacion = $('#regOperacion');
                         selectOperacion.empty().append('<option value="">Seleccione operación...</option>');
-                        
-                        data.operaciones.forEach(op => {
+
+                        (data.operaciones || []).forEach(op => {
                             const progreso = op.porcentaje_completado || 0;
                             const completado = parseFloat(progreso) >= 100;
-                            
-                            // Agregar al select si no está completa
                             if (!completado) {
                                 selectOperacion.append(`<option value="${op.id}">${op.nombre_operacion}</option>`);
                             }
