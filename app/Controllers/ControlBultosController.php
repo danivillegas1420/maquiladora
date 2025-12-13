@@ -1396,6 +1396,158 @@ class ControlBultosController extends BaseController
             'message' => 'Error al crear los bultos'
         ]);
     }
+
+    /**
+     * Descargar matriz en PDF
+     */
+    public function descargarMatrizPDF($id)
+    {
+        try {
+            // Cargar datos del control
+            $control = $this->db->table('control_bultos')->where('id', $id)->get()->getRow();
+            if (!$control) {
+                throw new \CodeIgniter\Exceptions\PageNotFoundException();
+            }
+
+            // Cargar registros de producción para la matriz
+            $registroModel = new \App\Models\RegistroProduccionModel();
+            $registros = $registroModel->getRegistrosPorControl($id);
+
+            // Construir matriz
+            $idx = [];
+            $colsSet = [];
+            foreach ($registros as $r) {
+                $opNombre = trim($r['nombre_operacion'] ?? '');
+                $colKey = trim($r['observaciones'] ?? '');
+                if ($opNombre && $colKey) {
+                    $emp = trim(($r['empleadoNombre'] ?? '') . ' ' . ($r['empleadoApellido'] ?? ''));
+                    $cant = (int)($r['cantidad_producida'] ?? 0);
+                    if (!isset($idx[$opNombre])) $idx[$opNombre] = [];
+                    if (!isset($idx[$opNombre][$colKey])) $idx[$opNombre][$colKey] = [];
+                    if (!isset($idx[$opNombre][$colKey][$emp])) $idx[$opNombre][$colKey][$emp] = 0;
+                    $idx[$opNombre][$colKey][$emp] += $cant;
+                    $colsSet[$colKey] = true;
+                }
+            }
+            $cols = array_keys($colsSet);
+            sort($cols);
+
+            // Generar HTML para PDF
+            $html = '<style>
+                table { border-collapse: collapse; width: 100%; font-size: 10px; }
+                th, td { border: 1px solid #000; padding: 4px; text-align: left; vertical-align: top; }
+                th { background: #f2f2f2; font-weight: bold; }
+                .op-col { width: 200px; }
+            </style>';
+            $html .= '<h3>Bitácora Matriz - Control #' . $id . ' (' . htmlspecialchars($control->estilo ?? '') . ')</h3>';
+            $html .= '<table>';
+            $html .= '<thead><tr><th class="op-col">Operación</th>';
+            foreach ($cols as $c) {
+                $html .= '<th>' . htmlspecialchars($c) . '</th>';
+            }
+            $html .= '</tr></thead><tbody>';
+            foreach ($idx as $op => $row) {
+                $html .= '<tr><td class="op-col">' . htmlspecialchars($op) . '</td>';
+                foreach ($cols as $c) {
+                    $cell = $row[$c] ?? [];
+                    $cellHtml = '';
+                    foreach ($cell as $emp => $qty) {
+                        $cellHtml .= htmlspecialchars($emp) . ': ' . $qty . '<br>';
+                    }
+                    $html .= '<td>' . $cellHtml . '</td>';
+                }
+                $html .= '</tr>';
+            }
+            $html .= '</tbody></table>';
+
+            // Usar DOMPDF si está disponible, sino salida simple
+            if (class_exists('\Dompdf\Dompdf')) {
+                $dompdf = new \Dompdf\Dompdf();
+                $dompdf->loadHtml($html);
+                $dompdf->setPaper('A4', 'landscape');
+                $dompdf->render();
+                $dompdf->stream('matriz_control_' . $id . '.pdf', ['Attachment' => true]);
+            } else {
+                // Fallback: devolver HTML como descarga
+                return $this->response
+                    ->setHeader('Content-Type', 'text/html')
+                    ->setHeader('Content-Disposition', 'attachment; filename="matriz_control_' . $id . '.html"')
+                    ->setBody($html);
+            }
+        } catch (\Throwable $e) {
+            return $this->response
+                ->setStatusCode(500)
+                ->setHeader('Content-Type', 'text/plain; charset=UTF-8')
+                ->setBody('Error generando PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Descargar matriz en Excel
+     */
+    public function descargarMatrizExcel($id)
+    {
+        try {
+            // Cargar datos del control
+            $control = $this->db->table('control_bultos')->where('id', $id)->get()->getRow();
+            if (!$control) {
+                throw new \CodeIgniter\Exceptions\PageNotFoundException();
+            }
+
+            // Cargar registros de producción para la matriz
+            $registroModel = new \App\Models\RegistroProduccionModel();
+            $registros = $registroModel->getRegistrosPorControl($id);
+
+            // Construir matriz
+            $idx = [];
+            $colsSet = [];
+            foreach ($registros as $r) {
+                $opNombre = trim($r['nombre_operacion'] ?? '');
+                $colKey = trim($r['observaciones'] ?? '');
+                if ($opNombre && $colKey) {
+                    $emp = trim(($r['empleadoNombre'] ?? '') . ' ' . ($r['empleadoApellido'] ?? ''));
+                    $cant = (int)($r['cantidad_producida'] ?? 0);
+                    if (!isset($idx[$opNombre])) $idx[$opNombre] = [];
+                    if (!isset($idx[$opNombre][$colKey])) $idx[$opNombre][$colKey] = [];
+                    if (!isset($idx[$opNombre][$colKey][$emp])) $idx[$opNombre][$colKey][$emp] = 0;
+                    $idx[$opNombre][$colKey][$emp] += $cant;
+                    $colsSet[$colKey] = true;
+                }
+            }
+            $cols = array_keys($colsSet);
+            sort($cols);
+
+            // Generar CSV simple (Excel compatible)
+            $csv = "\xEF\xBB\xBF"; // BOM for UTF-8
+            $csv .= "Operación";
+            foreach ($cols as $c) {
+                $csv .= "," . $c;
+            }
+            $csv .= "\n";
+            foreach ($idx as $op => $row) {
+                $csv .= '"' . str_replace('"', '""', $op) . '"';
+                foreach ($cols as $c) {
+                    $cell = $row[$c] ?? [];
+                    $cellLines = [];
+                    foreach ($cell as $emp => $qty) {
+                        $cellLines[] = $emp . ': ' . $qty;
+                    }
+                    $csv .= ',"' . str_replace('"', '""', implode("\n", $cellLines)) . '"';
+                }
+                $csv .= "\n";
+            }
+
+            return $this->response
+                ->setHeader('Content-Type', 'text/csv')
+                ->setHeader('Content-Disposition', 'attachment; filename="matriz_control_' . $id . '.csv"')
+                ->setBody($csv);
+        } catch (\Throwable $e) {
+            return $this->response
+                ->setStatusCode(500)
+                ->setHeader('Content-Type', 'text/plain; charset=UTF-8')
+                ->setBody('Error generando Excel: ' . $e->getMessage());
+        }
+    }
 }
 
 

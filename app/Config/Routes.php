@@ -500,6 +500,14 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
         $routes->get('(:num)/registros-produccion', 'ControlBultosController::registrosProduccion/$1');
         $routes->get('operacion/(:num)/resumen-produccion', 'ControlBultosController::resumenProduccionOperacion/$1');
         $routes->get('(:num)/export-excel', 'ControlBultosController::exportExcel/$1');
+        $routes->get('(:num)/matriz/pdf', 'ControlBultosController::descargarMatrizPDF/$1');
+        $routes->get('(:num)/matriz/excel', 'ControlBultosController::descargarMatrizExcel/$1');
+    });
+
+    // Control de Bultos (sin API - para descargas directas)
+    $routes->group('control-bultos', function ($routes) {
+        $routes->get('(:num)/matriz/pdf', 'ControlBultosController::descargarMatrizPDF/$1');
+        $routes->get('(:num)/matriz/excel', 'ControlBultosController::descargarMatrizExcel/$1');
     });
 
     // API Plantillas de Operaciones

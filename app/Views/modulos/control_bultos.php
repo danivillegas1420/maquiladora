@@ -55,7 +55,13 @@
         max-height: 70vh;
         border: 1px solid #cfcfcf;
         border-radius: 6px;
-        background: #ffffff;
+        background: #0f1115;
+    }
+
+    /* Forzar estilos dentro del modal (evitar overrides por tema/Bootstrap) */
+    #modalBitacoraMatriz .matriz-bitacora-wrap {
+        background: #0f1115 !important;
+        border-color: rgba(255,255,255,0.18) !important;
     }
 
     .matriz-bitacora {
@@ -70,28 +76,53 @@
         padding: 6px 8px;
         vertical-align: top;
         word-wrap: break-word;
-        color: #212529;
+        color: #e9ecef;
         font-size: 12px;
+    }
+
+    #modalBitacoraMatriz .matriz-bitacora th,
+    #modalBitacoraMatriz .matriz-bitacora td {
+        border-color: rgba(255,255,255,0.18) !important;
+        color: #ffffff !important;
     }
 
     .matriz-bitacora thead th {
         position: sticky;
         top: 0;
         z-index: 5;
-        background: #f1f3f5;
-        color: #212529;
+        background: #1f2d3d;
+        color: #ffffff;
         text-align: center;
+    }
+
+    #modalBitacoraMatriz .matriz-bitacora thead th {
+        background: #1f2d3d !important;
+        color: #ffffff !important;
     }
 
     .matriz-bitacora .op-col {
         position: sticky;
         left: 0;
         z-index: 6;
-        background: #f1f3f5;
-        color: #212529;
+        background: #1f2d3d;
+        color: #ffffff;
         width: 260px;
         min-width: 260px;
         max-width: 260px;
+    }
+
+    #modalBitacoraMatriz .matriz-bitacora .op-col {
+        background: #1f2d3d !important;
+        color: #ffffff !important;
+    }
+
+    .matriz-bitacora tbody td {
+        background: rgba(255,255,255,0.03);
+    }
+
+    #modalBitacoraMatriz .matriz-bitacora tbody td {
+        background: rgba(255,255,255,0.04) !important;
+        color: #ffffff !important;
     }
 
     .matriz-bitacora td {
@@ -100,23 +131,22 @@
     }
 
     .matriz-cell-item {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
+        display: block;
         font-size: 11px;
         line-height: 1.2;
         padding: 1px 0;
     }
 
     .matriz-cell-item .emp {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 120px;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        max-width: none;
     }
 
     .matriz-cell-item .qty {
         font-weight: 600;
+        display: block;
     }
 
     .matriz-col-head {
@@ -129,11 +159,59 @@
 
     .matriz-col-head .num {
         font-weight: 700;
+        color: #ffffff;
     }
 
     .matriz-col-head .meta {
         font-size: 10px;
-        color: #6c757d;
+        color: rgba(255,255,255,0.75);
+    }
+
+    #modalBitacoraMatriz .matriz-col-head .num,
+    #modalBitacoraMatriz .matriz-col-head .meta,
+    #modalBitacoraMatriz .matriz-cell-item,
+    #modalBitacoraMatriz .matriz-cell-item .emp,
+    #modalBitacoraMatriz .matriz-cell-item .qty {
+        color: #ffffff !important;
+    }
+
+    @media (max-width: 768px) {
+        #modalBitacoraMatriz .modal-dialog {
+            max-width: 98vw;
+            margin: 0.5rem auto;
+        }
+
+        #modalBitacoraMatriz .matriz-bitacora-wrap {
+            max-height: 60vh;
+        }
+
+        /* Dejar que la tabla crezca horizontalmente y se scrollee (evita texto en vertical) */
+        #modalBitacoraMatriz .matriz-bitacora {
+            table-layout: auto !important;
+            width: max-content !important;
+            min-width: 100%;
+        }
+
+        #modalBitacoraMatriz .matriz-bitacora th,
+        #modalBitacoraMatriz .matriz-bitacora td {
+            min-width: 120px;
+        }
+
+        #modalBitacoraMatriz .matriz-bitacora .op-col {
+            width: 180px;
+            min-width: 180px;
+            max-width: 180px;
+        }
+
+        #modalBitacoraMatriz .matriz-col-head {
+            white-space: nowrap;
+        }
+
+        #modalBitacoraMatriz .matriz-cell-item .emp {
+            white-space: normal;
+            word-break: normal;
+            overflow-wrap: anywhere;
+        }
     }
 </style>
 <?= $this->endSection() ?>
@@ -558,8 +636,16 @@
                 <div id="bitacoraMatrizContent" style="display:none;"></div>
             </div>
             <div class="modal-footer">
-                <a href="#" class="btn btn-primary" id="btnIrMatriz" target="_blank" style="display:none;">Ir a Vista Matriz</a>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-success" id="btnDescargarMatrizPDF" title="Descargar matriz en PDF">
+                        <i class="fas fa-file-pdf me-1"></i> PDF
+                    </button>
+                    <button class="btn btn-success" id="btnDescargarMatrizExcel" title="Descargar matriz en Excel">
+                        <i class="fas fa-file-excel me-1"></i> Excel
+                    </button>
+                    <a href="#" class="btn btn-primary" id="btnIrMatriz" target="_blank" style="display:none;">Ir a Vista Matriz</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1067,68 +1153,75 @@
                     const operaciones = (respProg.data && Array.isArray(respProg.data.operaciones)) ? respProg.data.operaciones : [];
                     const registros = Array.isArray(respReg.data) ? respReg.data : [];
 
-                    if (bultos.length === 0) {
-                        $('#bitacoraMatrizEmpty').text('No hay bultos creados para este control.').show();
-                        $('#btnIrMatriz').show();
-                        return;
-                    }
-
                     if (operaciones.length === 0) {
                         $('#bitacoraMatrizEmpty').text('No hay operaciones configuradas para este control.').show();
                         return;
                     }
 
-                    const bultoCols = bultos.map(b => ({
-                        numero: String(b.numero_bulto || '').trim(),
-                        talla: String(b.talla || '').trim(),
-                        cantidad: String(b.cantidad ?? '').trim(),
-                    })).filter(b => b.numero !== '');
+                    let cols = [];
+                    if (bultos.length > 0) {
+                        cols = bultos.map(b => ({
+                            key: String(b.numero_bulto || '').trim(),
+                            label: String(b.numero_bulto || '').trim(),
+                            talla: String(b.talla || '').trim(),
+                            cantidad: String(b.cantidad ?? '').trim(),
+                        })).filter(c => c.key !== '');
+                    } else {
+                        const uniq = new Set();
+                        registros.forEach(r => {
+                            const k = String(r.observaciones || '').trim();
+                            if (k) uniq.add(k);
+                        });
+                        cols = Array.from(uniq).sort().map(k => ({ key: k, label: k, talla: '', cantidad: '' }));
+                    }
 
-                    // index[opNombre][bultoNumero][empleado] = total
-                    const index = {};
+                    if (cols.length === 0) {
+                        $('#bitacoraMatrizEmpty').text('No hay bultos (observaciones) ni registros para construir la matriz.').show();
+                        $('#btnIrMatriz').show();
+                        return;
+                    }
+
+                    // index[opNombre][colKey][empleado] = total
+                    const idx = {};
                     registros.forEach(r => {
                         const opNombre = String(r.nombre_operacion || '').trim();
-                        const obs = String(r.observaciones || '').trim();
-                        const m = obs.match(/bulto\s*(\d+)/i);
-                        if (!opNombre || !m) return;
-                        const bNum = String(m[1] || '').padStart(3, '0');
+                        const colKey = String(r.observaciones || '').trim();
+                        if (!opNombre || !colKey) return;
                         const emp = (String(r.empleadoNombre || '') + ' ' + String(r.empleadoApellido || '')).trim() || ('ID ' + (r.empleadoId || ''));
                         const cant = parseInt(r.cantidad_producida || 0) || 0;
-                        if (!index[opNombre]) index[opNombre] = {};
-                        if (!index[opNombre][bNum]) index[opNombre][bNum] = {};
-                        if (!index[opNombre][bNum][emp]) index[opNombre][bNum][emp] = 0;
-                        index[opNombre][bNum][emp] += cant;
+                        if (!idx[opNombre]) idx[opNombre] = {};
+                        if (!idx[opNombre][colKey]) idx[opNombre][colKey] = {};
+                        if (!idx[opNombre][colKey][emp]) idx[opNombre][colKey][emp] = 0;
+                        idx[opNombre][colKey][emp] += cant;
                     });
 
                     let html = '<div class="matriz-bitacora-wrap">';
                     html += '<table class="matriz-bitacora">';
-                    html += '<thead><tr>';
-                    html += '<th class="op-col">Operación</th>';
-                    bultoCols.forEach(b => {
-                        const meta = (b.talla || b.cantidad) ? `${b.talla || ''}${(b.talla && b.cantidad) ? ' · ' : ''}${b.cantidad || ''}` : '';
-                        html += '<th><div class="matriz-col-head"><div class="num">' + b.numero + '</div>' + (meta ? '<div class="meta">' + meta + '</div>' : '') + '</div></th>';
+                    html += '<thead>';
+                    html += '<tr><th class="op-col">BULTOS</th>';
+                    cols.forEach(c => {
+                        html += '<th><div class="matriz-col-head"><div class="num">' + (c.label || '') + '</div></div></th>';
                     });
-                    html += '</tr></thead>';
+                    html += '</tr>';
+                    html += '</thead>';
                     html += '<tbody>';
 
                     operaciones.forEach(op => {
                         const opNombre = String(op.nombre_operacion || op.nombre || '').trim() || '---';
                         html += '<tr>';
                         html += '<td class="op-col">' + opNombre + '</td>';
-                        bultoCols.forEach(b => {
-                            const cell = (index[opNombre] && index[opNombre][b.numero]) ? index[opNombre][b.numero] : null;
+                        cols.forEach(c => {
+                            const cell = (idx[opNombre] && idx[opNombre][c.key]) ? idx[opNombre][c.key] : null;
                             if (!cell) {
                                 html += '<td></td>';
                                 return;
                             }
-                            const empleados = Object.keys(cell);
                             let cellHtml = '';
-                            empleados.forEach(emp => {
+                            Object.keys(cell).forEach(emp => {
                                 cellHtml += '<div class="matriz-cell-item"><span class="emp">' + emp + '</span><span class="qty">' + cell[emp] + '</span></div>';
                             });
                             html += '<td>' + cellHtml + '</td>';
                         });
-
                         html += '</tr>';
                     });
 
@@ -1145,7 +1238,45 @@
                 });
         });
 
-        // Editar Control
+        // Descargar matriz en PDF
+        $(document).on('click', '#btnDescargarMatrizPDF', function() {
+            // Obtener el controlId desde el botón Ir a Vista Matriz
+            const href = $('#btnIrMatriz').attr('href');
+            if (!href) {
+                Swal.fire('Error', 'No se pudo identificar el control.', 'error');
+                return;
+            }
+            // Extraer el ID del final de la URL: /modulo3/control-bultos/123/matriz
+            const parts = href.split('/');
+            const id = parts[parts.length - 2]; // penúltimo elemento
+            if (!id || isNaN(id)) {
+                Swal.fire('Error', 'ID de control no válido.', 'error');
+                return;
+            }
+            const url = `<?= base_url('modulo3/control-bultos') ?>/${id}/matriz/pdf`;
+            console.log('URL PDF:', url);
+            window.open(url, '_blank');
+        });
+
+        // Descargar matriz en Excel
+        $(document).on('click', '#btnDescargarMatrizExcel', function() {
+            // Obtener el controlId desde el botón Ir a Vista Matriz
+            const href = $('#btnIrMatriz').attr('href');
+            if (!href) {
+                Swal.fire('Error', 'No se pudo identificar el control.', 'error');
+                return;
+            }
+            // Extraer el ID del final de la URL: /modulo3/control-bultos/123/matriz
+            const parts = href.split('/');
+            const id = parts[parts.length - 2]; // penúltimo elemento
+            if (!id || isNaN(id)) {
+                Swal.fire('Error', 'ID de control no válido.', 'error');
+                return;
+            }
+            const url = `<?= base_url('modulo3/control-bultos') ?>/${id}/matriz/excel`;
+            console.log('URL Excel:', url);
+            window.open(url, '_blank');
+        });
         $('#tablaControles tbody').on('click', '.btn-editar', function () {
             const id = $(this).data('id');
 

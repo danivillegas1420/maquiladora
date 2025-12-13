@@ -17,6 +17,95 @@
             <style>
                 .timer-badge{ font-size:1.6rem; font-weight:600; padding:.35rem .8rem; min-width:150px; text-align:center; }
                 .status-badge{ font-size:1.25rem; font-weight:700; padding:.4rem .7rem; min-width:110px; text-align:center; }
+                @media (max-width: 768px) {
+                    .container { padding: 0.5rem; }
+                    .card { border-radius: 0; }
+                    .card-body { padding: 0.75rem; }
+                    .d-flex.justify-content-between.align-items-center {
+                        flex-direction: column;
+                        gap: 0.5rem;
+                        align-items: flex-start !important;
+                    }
+                    .d-flex.justify-content-between.align-items-center > *:last-child {
+                        align-self: flex-end;
+                    }
+                    .border.rounded.p-3.mb-2 {
+                        padding: 0.75rem !important;
+                        flex-direction: column;
+                        gap: 0.75rem;
+                        align-items: flex-start !important;
+                    }
+                    .border.rounded.p-3.mb-2 .d-flex.align-items-center {
+                        flex-wrap: wrap;
+                        gap: 0.5rem;
+                    }
+                    .border.rounded.p-3.mb-2 .d-flex.align-items-center .fw-semibold.fs-5 {
+                        font-size: 1.1rem !important;
+                    }
+                    .border.rounded.p-3.mb-2 .d-flex.gap-3 {
+                        flex-direction: column;
+                        gap: 0.5rem;
+                        align-items: stretch !important;
+                        width: 100%;
+                    }
+                    .border.rounded.p-3.mb-2 .d-flex.gap-3 .d-flex.align-items-center {
+                        justify-content: flex-start;
+                    }
+                    .border.rounded.p-3.mb-2 .d-flex.gap-3 .d-flex.align-items-center:last-child {
+                        justify-content: flex-end;
+                    }
+                    .btn-sm {
+                        font-size: 0.75rem;
+                        padding: 0.25rem 0.5rem;
+                    }
+                    .status-badge {
+                        font-size: 0.9rem;
+                        min-width: auto;
+                        padding: 0.25rem 0.5rem;
+                    }
+                    .timer-badge {
+                        font-size: 1.2rem;
+                        min-width: auto;
+                        padding: 0.25rem 0.5rem;
+                    }
+                    .modal-dialog {
+                        margin: 0.5rem;
+                        max-width: calc(100vw - 1rem);
+                    }
+                    .modal-body {
+                        padding: 1rem;
+                        overflow-x: hidden;
+                    }
+                    .modal-body .row.g-3 > * {
+                        margin-bottom: 0.75rem;
+                    }
+                    .table-responsive {
+                        font-size: 0.875rem;
+                    }
+                    .nav-tabs .nav-link {
+                        font-size: 0.9rem;
+                        padding: 0.5rem 0.75rem;
+                    }
+                    /* Evitar que el spinner y botones se salgan del modal */
+                    .spinner-border {
+                        max-width: 2rem;
+                        max-height: 2rem;
+                    }
+                    .btn {
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 100%;
+                    }
+                    .modal-footer {
+                        flex-wrap: wrap;
+                        gap: 0.5rem;
+                    }
+                    .modal-footer .btn {
+                        flex: 1 1 auto;
+                        min-width: 0;
+                    }
+                }
             </style>
             <ul class="nav nav-tabs mb-3" id="prodTabs" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -331,13 +420,7 @@
                     <input type="time" class="form-control" id="rend-hora-fin" name="hora_fin">
                 </div>
 
-                <div class="col-md-6">
-                    <label class="form-label">Talla (si aplica)</label>
-                    <select class="form-select" id="rend-talla" name="talla_info">
-                        <option value="">General (sin talla específica)</option>
-                    </select>
-                </div>
-
+                
                 <!-- Información del empleado (oculto) -->
                 <input type="hidden" id="rend-empleado-id" name="empleadoId">
             </div>
