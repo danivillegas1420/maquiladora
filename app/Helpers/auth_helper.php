@@ -59,10 +59,8 @@ if (!function_exists('can_menu')) {
             return true;
         }
 
-        // Bypass específico para Empleado (Producción e Incidencias)
-        if (($perm === 'menu.produccion' || $perm === 'menu.incidencias') && $roleNorm === 'empleado') {
-            return true;
-        }
+        // NOTA: No otorgar bypass automático a 'empleado' para que el menú respete
+        // los permisos configurados en Roles (rol_permiso).
 
         // Optimización: usar cache de permisos en sesión
         $cachedPermissions = session()->get('cached_permissions');

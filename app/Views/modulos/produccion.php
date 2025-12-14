@@ -445,6 +445,15 @@
     const __isRolAdminJefe = <?= json_encode(in_array(mb_strtolower(trim($__roleName)), ['administrador','jefe','superadmin'])) ?>;
     const empId = <?= json_encode($empleadoId ?? null) ?>;
     const maquiladoraId = <?= json_encode(session()->get('maquiladora_id') ?? null) ?>;
+
+    const __runningTimers = new Map();
+    function __format(ms){
+        const s = Math.floor(ms/1000);
+        const hh = String(Math.floor(s/3600)).padStart(2,'0');
+        const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
+        const ss = String(s%60).padStart(2,'0');
+        return hh+':'+mm+':'+ss;
+    }
     
     // Función para cargar las órdenes
     function cargarOrdenes() {
@@ -467,6 +476,13 @@
                 console.log('=== CARGAR ORDENES ===');
                 console.log('Items recibidos:', data.items);
                 const items = Array.isArray(data.items) ? data.items : [];
+
+                // Si vamos a re-renderizar, limpiar timers actuales (el DOM anterior se destruye)
+                for (const rec of __runningTimers.values()) {
+                    try { clearInterval(rec.tick); } catch (e) { /* ignore */ }
+                }
+                __runningTimers.clear();
+
                 // Log del estatus de cada item
                 items.forEach(item => {
                     console.log('OP:', item.folio, 'Estatus:', item.status);
@@ -477,6 +493,9 @@
                     const desde = it.asignadoDesde || '-';
                     const hasta = it.asignadoHasta || '-';
                     const tieneFinalizado = it.tieneFinalizado === true;
+                    const tiempoActivo = it.tiempoActivo === true;
+                    const tiempoInicio = it.tiempoInicio || null;
+                    const tiempoTrabajoId = it.tiempoTrabajoId || '';
                     const lower = String(status).toLowerCase();
                     // Mostrar botón si: el estatus es "En proceso" o "En corte" (permite reactivar cuando vuelve a proceso)
                     // O si no tiene finalizado y el estatus es correcto
@@ -486,9 +505,13 @@
                                      (lower !== 'completada' && lower !== 'corte finalizado');
                     
                     let actionButton = '';
-                    if (showStart) {
+                    if (tiempoActivo && tiempoInicio) {
+                        actionButton =
+                            '<span class="badge bg-success timer-badge" data-op-id="' + (it.opId||it.id||'') + '" data-inicio="' + String(tiempoInicio) + '">00:00:00</span>'
+                            + '<button type="button" class="btn btn-sm btn-outline-danger btn-finalizar-production" data-id="' + (it.opId||it.id||'') + '" data-tiempo-id="' + String(tiempoTrabajoId) + '"><i class="bi bi-stop-circle me-1"></i>Finalizar</button>';
+                    } else if (showStart) {
                         // Si está en proceso/corte, mostrar botón incluso si tiene finalizado (permite reactivar)
-                        actionButton = '<button class="btn btn-sm btn-success btn-start-production" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '"><i class="bi bi-play-circle me-1"></i>Empezar</button>';
+                        actionButton = '<button type="button" class="btn btn-sm btn-success btn-start-production" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '"><i class="bi bi-play-circle me-1"></i>Empezar</button>';
                     } else if (tieneFinalizado && !showStart) {
                         // Solo mostrar "Ya finalizado" si no está en proceso/corte
                         actionButton = '<span class="badge bg-secondary">Ya finalizado</span>';
@@ -497,11 +520,11 @@
                     // Botón de registrar rendimiento (solo para empleados y corte cuando están en proceso)
                     let rendimientoButton = '';
                     if ((__isRolEmpleado && lower === 'en proceso') || (__isRolCorte && lower === 'en corte')) {
-                        rendimientoButton = '<button class="btn btn-sm btn-outline-primary btn-registrar-rendimiento" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '" title="Registrar mi rendimiento"><i class="bi bi-clipboard-check me-1"></i>Mi Rendimiento</button>';
+                        rendimientoButton = '<button type="button" class="btn btn-sm btn-outline-primary btn-registrar-rendimiento" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '" title="Registrar mi rendimiento"><i class="bi bi-clipboard-check me-1"></i>Mi Rendimiento</button>';
                     }
                     
-                    const reportButton = '<button class="btn btn-outline-secondary border-0 p-1 ms-2 btn-reporte-op" data-folio="' + (folio||'') + '" data-bs-toggle="modal" data-bs-target="#opReporteModal" title="Ver Reporte"><i class="bi bi-file-earmark-text fs-4"></i></button>';
-                    const warningButton = '<button class="btn btn-outline-warning border-0 p-1 me-2 btn-incidencia-op" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '" data-bs-toggle="modal" data-bs-target="#opIncidenciaModal" title="Reportar Incidencia"><i class="bi bi-exclamation-triangle fs-4"></i></button>';
+                    const reportButton = '<button type="button" class="btn btn-outline-secondary border-0 p-1 ms-2 btn-reporte-op" data-folio="' + (folio||'') + '" data-bs-toggle="modal" data-bs-target="#opReporteModal" title="Ver Reporte"><i class="bi bi-file-earmark-text fs-4"></i></button>';
+                    const warningButton = '<button type="button" class="btn btn-outline-warning border-0 p-1 me-2 btn-incidencia-op" data-folio="' + (folio||'') + '" data-id="' + (it.opId||it.id||'') + '" data-bs-toggle="modal" data-bs-target="#opIncidenciaModal" title="Reportar Incidencia"><i class="bi bi-exclamation-triangle fs-4"></i></button>';
                     
                     const left = (
                         '<div>'
@@ -542,6 +565,9 @@
                     });
                     $pendCount.textContent = pending.length + ' pendientes';
                     $pendList.innerHTML = pending.length ? pending.map(renderCard).join('') : '<div class="text-muted">No hay pedidos pendientes.</div>';
+
+                    // Rehidratar timers activos en pendientes
+                    initTimersFromItems(pending);
                 }
 
                 if ($doneList && $doneCount) {
@@ -552,6 +578,9 @@
                     });
                     $doneCount.textContent = done.length;
                     $doneList.innerHTML = done.length ? done.map(renderCard).join('') : '<div class="text-muted">No hay pedidos finalizados.</div>';
+
+                    // Rehidratar timers activos en finalizados (por si acaso)
+                    initTimersFromItems(done);
                 }
             })
             .catch(() => {
@@ -561,6 +590,49 @@
     
     // Cargar órdenes al inicio
     cargarOrdenes();
+
+    function initTimersFromItems(items) {
+        if (!Array.isArray(items)) return;
+
+        function __parseMysqlDateTimeLocal(dt) {
+            const str = String(dt || '').trim();
+            // esperado: YYYY-mm-dd HH:ii:ss
+            const m = str.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+            if (!m) return null;
+            const y = parseInt(m[1], 10);
+            const mo = parseInt(m[2], 10) - 1;
+            const d = parseInt(m[3], 10);
+            const h = parseInt(m[4], 10);
+            const mi = parseInt(m[5], 10);
+            const s = parseInt(m[6] || '0', 10);
+            return new Date(y, mo, d, h, mi, s).getTime();
+        }
+
+        items.forEach(it => {
+            if (it.tiempoActivo !== true || !it.tiempoInicio) return;
+            const opId = String(it.opId || it.id || '');
+            if (!opId) return;
+
+            // Ya existe en memoria
+            if (__runningTimers.has(opId)) return;
+
+            const inicioMs = __parseMysqlDateTimeLocal(it.tiempoInicio);
+            if (!inicioMs || Number.isNaN(inicioMs)) return;
+
+            const now = Date.now();
+            // si por alguna razón el inicio parece estar en el futuro (desfase), no lo reseteamos a 0
+            // lo limitamos a 0 y el usuario verá el conteo correcto cuando el reloj local alcance
+            const elapsed = Math.max(0, now - inicioMs);
+
+            const timerEl = document.querySelector(`.timer-badge[data-op-id="${opId}"]`);
+            if (!timerEl) return;
+
+            const t0 = now - elapsed;
+            timerEl.textContent = __format(elapsed);
+            const tick = setInterval(function(){ timerEl.textContent = __format(Date.now()-t0); }, 1000);
+            __runningTimers.set(opId, {t0, tick, el: timerEl, tiempoTrabajoId: it.tiempoTrabajoId || null});
+        });
+    }
 
     // Handler para el botón de reporte
     document.addEventListener('click', function(ev){
@@ -757,6 +829,7 @@
     document.addEventListener('click', function(ev){
         const rendBtn = ev.target.closest('.btn-registrar-rendimiento');
         if (rendBtn) {
+            ev.preventDefault();
             const folio = rendBtn.getAttribute('data-folio') || '';
             const id = rendBtn.getAttribute('data-id') || '';
             
@@ -866,8 +939,16 @@
     }
     
     // Submit del formulario de rendimiento
-    document.getElementById('formRendimiento').addEventListener('submit', function(e){
+    const __formRend = document.getElementById('formRendimiento');
+    document.addEventListener('submit', function (e) {
+        const t = e.target;
+        if (t && t.id === 'formRendimiento') {
+            e.preventDefault();
+        }
+    }, true);
+    if (__formRend) __formRend.addEventListener('submit', function(e){
         e.preventDefault();
+        e.stopPropagation();
         const form = this;
         const formData = new FormData(form);
         
@@ -908,11 +989,6 @@
                 const modal = bootstrap.Modal.getInstance(document.getElementById('rendimientoModal'));
                 modal.hide();
                 form.reset();
-                
-                // Recargar lista de órdenes para actualizar estado
-                setTimeout(() => {
-                    cargarOrdenes();
-                }, 1000);
             } else {
                 Swal.fire({
                     icon: 'error',
@@ -935,14 +1011,6 @@
         });
     });
 
-    const __runningTimers = new Map();
-    function __format(ms){
-        const s = Math.floor(ms/1000);
-        const hh = String(Math.floor(s/3600)).padStart(2,'0');
-        const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
-        const ss = String(s%60).padStart(2,'0');
-        return hh+':'+mm+':'+ss;
-    }
     document.addEventListener('click', function(ev){
         const startBtn = ev.target.closest('.btn-start-production');
         if (startBtn) {
@@ -974,6 +1042,10 @@
                     if (data.ok) {
                         Swal.fire({ icon:'success', title:'Iniciado', text:'Cronómetro en marcha.', timer:1200, showConfirmButton:false });
                         const right = startBtn.parentElement;
+                        // Mantener botón de rendimiento si existe (al reordenar se borraría)
+                        const rendimientoBtn = right ? right.querySelector('.btn-registrar-rendimiento') : null;
+                        const rendimientoBtnClone = rendimientoBtn ? rendimientoBtn.cloneNode(true) : null;
+
                         const statusEl = right.querySelector('.status-badge');
                         const timer = document.createElement('span');
                         timer.className = 'badge bg-success timer-badge';
@@ -992,6 +1064,7 @@
                         centerWrap.className = 'd-flex align-items-center justify-content-center gap-3 flex-wrap';
                         centerWrap.appendChild(timer);
                         centerWrap.appendChild(finBtn);
+                        if (rendimientoBtnClone) centerWrap.appendChild(rendimientoBtnClone);
                         right.appendChild(centerWrap);
                         if (statusEl) right.appendChild(statusEl);
                     } else {

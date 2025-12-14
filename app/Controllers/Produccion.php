@@ -506,6 +506,9 @@ class Produccion extends BaseController
                     $row['folio'] = '';
                     $row['status'] = '';
                     $row['tieneFinalizado'] = false;
+                    $row['tiempoActivo'] = false;
+                    $row['tiempoTrabajoId'] = null;
+                    $row['tiempoInicio'] = null;
                     continue;
                 }
 
@@ -532,10 +535,26 @@ class Produccion extends BaseController
                         }
 
                         log_message('debug', "OP {$opId} - Estatus obtenido: '{$row['status']}', tieneFinalizado: " . ($row['tieneFinalizado'] ? 'true' : 'false'));
+
+                        // Tiempo activo (sin finalizar) para rehidratar cronómetro en el front
+                        try {
+                            $activo = $tiempoModel->obtenerActivo($empleadoId, $opId);
+                            $row['tiempoActivo'] = !empty($activo);
+                            $row['tiempoTrabajoId'] = !empty($activo) && isset($activo['id']) ? (int) $activo['id'] : null;
+                            $row['tiempoInicio'] = !empty($activo) ? ($activo['inicio'] ?? null) : null;
+                        } catch (\Throwable $e) {
+                            $row['tiempoActivo'] = false;
+                            $row['tiempoTrabajoId'] = null;
+                            $row['tiempoInicio'] = null;
+                            log_message('warning', "Error al obtener tiempo activo para OP {$opId}: " . $e->getMessage());
+                        }
                     } else {
                         $row['folio'] = '';
                         $row['status'] = '';
                         $row['tieneFinalizado'] = false;
+                        $row['tiempoActivo'] = false;
+                        $row['tiempoTrabajoId'] = null;
+                        $row['tiempoInicio'] = null;
                         log_message('warning', "OP {$opId} - No se encontró en BD");
                     }
                 } catch (\Throwable $e) {
@@ -543,6 +562,9 @@ class Produccion extends BaseController
                     $row['folio'] = '';
                     $row['status'] = '';
                     $row['tieneFinalizado'] = false;
+                    $row['tiempoActivo'] = false;
+                    $row['tiempoTrabajoId'] = null;
+                    $row['tiempoInicio'] = null;
                     log_message('error', "Error al obtener datos de OP {$opId}: " . $e->getMessage());
                 }
             }
@@ -676,11 +698,14 @@ class Produccion extends BaseController
                 return $this->response->setStatusCode(500)->setJSON(['error' => 'No se pudo iniciar el tiempo de trabajo']);
             }
 
+            $registroNuevo = $tiempoModel->find((int) $id);
+
             return $this->response->setJSON([
                 'ok' => true,
                 'id' => $id,
                 'empleadoId' => $empleadoId,
                 'ordenProduccionId' => $ordenProduccionId,
+                'inicio' => $registroNuevo['inicio'] ?? null,
             ]);
         } catch (\Throwable $e) {
             return $this->response->setStatusCode(500)->setJSON([

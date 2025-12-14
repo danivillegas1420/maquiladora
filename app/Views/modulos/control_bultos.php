@@ -45,11 +45,6 @@
         text-align: center;
     }
 
-    #tablaEmpleadosCantidad th:nth-child(4),
-    #tablaEmpleadosCantidad td:nth-child(4) {
-        display: none;
-    }
-
     .matriz-bitacora-wrap {
         overflow: auto;
         max-height: 70vh;
@@ -693,7 +688,7 @@
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm cantidad-input" 
-                                   min="0" placeholder="0" disabled
+                                   min="0" placeholder="0"
                                    data-empleado-id="${empleado.id}">
                         </td>
                         <td><small class="text-muted">${empleado.puesto || 'N/A'}</small></td>
@@ -723,7 +718,7 @@
             limpiarResumenRegistrado();
 
             $.ajax({
-                url: `<?= base_url('modulo3/api/control-bultos') ?>/${operacionId}/resumen-produccion`,
+                url: `<?= base_url('modulo3/api/control-bultos') ?>/operacion/${operacionId}/resumen-produccion`,
                 type: 'GET',
                 success: function (response) {
                     if (!response || !response.ok) {
@@ -750,8 +745,9 @@
         // Función para actualizar el total de cantidades
         function actualizarTotalCantidad() {
             let total = 0;
-            $('.cantidad-input').each(function() {
-                const valor = parseInt($(this).val()) || 0;
+            $('.empleado-checkbox:checked').each(function () {
+                const empleadoId = $(this).data('empleado-id');
+                const valor = parseInt($(`.cantidad-input[data-empleado-id="${empleadoId}"]`).val()) || 0;
                 total += valor;
             });
             $('#totalCantidad').text(total);
@@ -763,9 +759,8 @@
             const empleadoId = $(this).data('empleado-id');
             const cantidadInput = $(`.cantidad-input[data-empleado-id="${empleadoId}"]`);
             
-            cantidadInput.prop('disabled', !isChecked);
             if (!isChecked) {
-                cantidadInput.val(0);
+                cantidadInput.val('');
             }
             
             actualizarTotalCantidad();
@@ -781,7 +776,33 @@
             setMarcacionEmpleadoIds(Array.from(currentIds));
         });
 
+        $(document).on('focus', '.cantidad-input', function () {
+            const val = String($(this).val() ?? '').trim();
+            if (val === '0') {
+                $(this).val('');
+            } else {
+                this.select();
+            }
+        });
+
         $(document).on('input', '.cantidad-input', function() {
+            const empleadoId = $(this).data('empleado-id');
+            const raw = String($(this).val() ?? '').trim();
+            const valor = raw === '' ? 0 : (parseInt(raw) || 0);
+            const checkbox = $(`.empleado-checkbox[data-empleado-id="${empleadoId}"]`);
+
+            checkbox.prop('checked', valor > 0);
+
+            // Persistir marcación sin disparar change (evita que se re-imponga 0)
+            const currentIds = new Set(getMarcacionEmpleadoIds());
+            const strId = String(empleadoId);
+            if (valor > 0) {
+                currentIds.add(strId);
+            } else {
+                currentIds.delete(strId);
+            }
+            setMarcacionEmpleadoIds(Array.from(currentIds));
+
             actualizarTotalCantidad();
         });
 
