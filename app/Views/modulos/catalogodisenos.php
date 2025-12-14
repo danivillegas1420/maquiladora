@@ -168,7 +168,6 @@
                             <label class="form-label">Cliente (opcional)</label>
                             <div class="d-flex align-items-center gap-2">
                                 <select class="form-select" name="clienteId" id="selClienteNuevo" disabled>
-                                    <option value="">Cargando </option>
                                 </select>
                                 <div id="clienteNuevoSpinner" class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem; display: none;">
                                     <span class="visually-hidden"></span>
@@ -180,25 +179,25 @@
                         <div class="col-md-3">
                             <label class="form-label">Sexo</label>
                             <select class="form-select" name="idSexoFK" id="selSexo" disabled>
-                                <option value="">Cargando…</option>
+                                <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Talla</label>
                             <select class="form-select" name="idTallasFK" id="selTalla" disabled>
-                                <option value="">Cargando…</option>
+                                <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Tipo de corte</label>
                             <select class="form-select" name="idTipoCorteFK" id="selTipoCorte" disabled>
-                                <option value="">Cargando…</option>
+                                <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Tipo de ropa</label>
                             <select class="form-select" name="idTipoRopaFK" id="selTipoRopa" disabled>
-                                <option value="">Cargando…</option>
+                                <option value=""></option>
                             </select>
                         </div>
 
@@ -305,25 +304,25 @@
                         <div class="col-md-3">
                             <label class="form-label">Sexo</label>
                             <select class="form-select" name="idSexoFK" id="e-selSexo" disabled>
-                                <option value="">Cargando…</option>
+                                <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Talla</label>
                             <select class="form-select" name="idTallasFK" id="e-selTalla" disabled>
-                                <option value="">Cargando…</option>
+                                <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Tipo de corte</label>
                             <select class="form-select" name="idTipoCorteFK" id="e-selTipoCorte" disabled>
-                                <option value="">Cargando…</option>
+                                <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Tipo de ropa</label>
                             <select class="form-select" name="idTipoRopaFK" id="e-selTipoRopa" disabled>
-                                <option value="">Cargando…</option>
+                                <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -342,7 +341,7 @@
                                 <label class="form-label">Cliente (opcional)</label>
                                 <div class="d-flex align-items-center gap-2">
                                     <select class="form-select" name="clienteId" id="e-selCliente" disabled>
-                                        <option value="">Cargando clientes…</option>
+                                        <option value=""></option>
                                     </select>
                                     <div id="e-clienteSpinner" class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem; display: none;">
                                         <span class="visualmente-hidden"></span>
@@ -520,7 +519,7 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted"></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -574,7 +573,7 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted"></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -628,7 +627,7 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted"></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -682,7 +681,7 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted"></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -739,7 +738,7 @@
             return;
         }
         if (isDxf) {
-            el.innerHTML = '<div style="height:360px; background:#f8f9fa;" class="rounded border d-flex align-items-center justify-content-center">Cargando DXF…</div>';
+            el.innerHTML = '<div style="height:360px; background:#f8f9fa;" class="rounded border d-flex align-items-center justify-content-center"></div>';
             // pequeño delay para asegurar que el div exista
             setTimeout(function(){ renderDXF(containerId.replace(/^#/,''), u); }, 30);
             return;
@@ -1150,7 +1149,7 @@
     function cargarArticulos(){
         const url = '<?= base_url('modulo2/articulos/json') ?>' + '?_=' + Date.now();
         const $disp = $('#listaDisponibles');
-        $disp.html('<div class="text-muted px-2">Cargando artículos…</div>');
+        $disp.html('<div class="text-muted px-2"></div>');
         return $.getJSON(url)
             .done(function(resp){
                 articulosCache = (resp && resp.items) ? resp.items : [];
@@ -1158,7 +1157,7 @@
             })
             .fail(function(xhr){
                 console.error('Error cargando artículos', xhr && xhr.status, xhr && xhr.responseText);
-                $('#listaDisponibles').html('<div class="text-danger px-2">Error cargando artículos</div>');
+                $('#listaDisponibles').html('<div class="text-danger px-2">Error</div>');
             });
     }
     function labelArticulo(a){
@@ -1307,7 +1306,7 @@
     // ==== Helpers: cargar catálogos con spinner ====
     function cargarCatalogo(url, selectSel){
         const $sel = $(selectSel);
-        $sel.prop('disabled', true).html('<option value="">Cargando…</option>');
+        $sel.prop('disabled', true).html('<option value=""></option>');
         return $.getJSON(url)
             .done(function(resp){
                 const items = (resp && resp.items) ? resp.items : [];
@@ -1344,7 +1343,7 @@
             "sInfoEmpty":      "Mostrando 0 a 0 de 0",
             "sInfoFiltered":   "(filtrado de _MAX_)",
             "sSearch":         "Buscar:",
-            "sLoadingRecords": "Cargando...",
+            "sLoadingRecords": "",
             "oPaginate": {
                 "sFirst":    "Primero",
                 "sLast":     "Último",
@@ -1422,7 +1421,7 @@
             const id = $(this).data('id');
             // Limpiar campos
             $('#m-id,#m-codigo,#m-nombre,#m-version,#m-fecha,#m-notas,#m-aprobado,#m-precio').text('-');
-            $('#m-descripcion').text('Cargando...');
+            $('#m-descripcion').text('');
             $('#m-materiales').text('-');
             
             // Limpiar previews
@@ -1545,7 +1544,7 @@
         // Función genérica para cargar datos de catálogo en una tabla
         function cargarCatalogoEnModal(config) {
             const $tbody = $(config.tabla + ' tbody');
-            $tbody.html('<tr><td colspan="4" class="text-center text-muted">Cargando...</td></tr>');
+            $tbody.html('<tr><td colspan="4" class="text-center text-muted"></td></tr>');
 
             // Siempre filtrar por maquiladora actual en estos catálogos
             const sep = config.url.indexOf('?') !== -1 ? '&' : '?';
@@ -1581,7 +1580,7 @@
                 })
                 .fail(function(xhr) {
                     $tbody.html('<tr><td colspan="4" class="text-center text-danger">Error al cargar los datos</td></tr>');
-                    console.error('Error cargando catálogo:', xhr);
+                    console.error('Error:', xhr);
                 });
         }
 

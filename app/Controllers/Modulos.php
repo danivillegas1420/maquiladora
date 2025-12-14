@@ -367,6 +367,112 @@ class Modulos extends BaseController
         }
     }
 
+    public function m1_pedido_pdf($id = null)
+    {
+        $id = (int) ($id ?? 0);
+        if ($id <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'ID inválido']);
+        }
+
+        try {
+            $pedidoModel = new \App\Models\PedidoModel();
+            $detalle = $pedidoModel->getPedidoDetalle($id);
+
+            if (!$detalle) {
+                return $this->response->setStatusCode(404)->setJSON(['error' => 'Pedido no encontrado']);
+            }
+
+            $pedido = [
+                'id' => (int) ($detalle['id'] ?? $id),
+                'folio' => $detalle['folio'] ?? '',
+                'fecha' => isset($detalle['fecha']) && $detalle['fecha'] ? date('d/m/Y', strtotime($detalle['fecha'])) : date('d/m/Y'),
+                'estatus' => $detalle['estatus'] ?? '',
+                'moneda' => $detalle['moneda'] ?? 'MXN',
+                'total' => isset($detalle['total']) ? number_format((float) $detalle['total'], 2) : '0.00',
+            ];
+
+            $cliente = $detalle['cliente'] ?? [];
+            $diseno = $detalle['diseno'] ?? null;
+            $tallas = $detalle['tallas'] ?? [];
+            $op_cantidadPlan = $detalle['op_cantidadPlan'] ?? null;
+            $op_fechaInicioPlan = isset($detalle['op_fechaInicioPlan']) && $detalle['op_fechaInicioPlan'] ? date('d/m/Y', strtotime($detalle['op_fechaInicioPlan'])) : null;
+            $op_fechaFinPlan = isset($detalle['op_fechaFinPlan']) && $detalle['op_fechaFinPlan'] ? date('d/m/Y', strtotime($detalle['op_fechaFinPlan'])) : null;
+
+            $maquiladoraId = session()->get('maquiladora_id');
+            $maquiladoraRaw = [];
+            if ($maquiladoraId) {
+                $db = \Config\Database::connect();
+                try {
+                    $maquiladoraRaw = $db->table('maquiladora')
+                        ->where('idmaquiladora', $maquiladoraId)
+                        ->get()
+                        ->getRowArray() ?: [];
+                } catch (\Throwable $e) {
+                    $maquiladoraRaw = [];
+                }
+                if (!$maquiladoraRaw) {
+                    try {
+                        $maquiladoraRaw = $db->table('Maquiladora')
+                            ->where('idmaquiladora', $maquiladoraId)
+                            ->get()
+                            ->getRowArray() ?: [];
+                    } catch (\Throwable $e2) {
+                        $maquiladoraRaw = [];
+                    }
+                }
+            }
+
+            $maquiladora = [
+                'nombre' => $maquiladoraRaw['nombre'] ?? ($maquiladoraRaw['Nombre_Maquila'] ?? ($maquiladoraRaw['Nombre'] ?? '')),
+                'domicilio' => $maquiladoraRaw['domicilio'] ?? ($maquiladoraRaw['Domicilio'] ?? ''),
+                'telefono' => $maquiladoraRaw['telefono'] ?? ($maquiladoraRaw['Telefono'] ?? ''),
+                'correo' => $maquiladoraRaw['correo'] ?? ($maquiladoraRaw['Correo'] ?? ''),
+                'dueno' => $maquiladoraRaw['dueno'] ?? ($maquiladoraRaw['Dueno'] ?? ''),
+                'logo_base64' => null,
+                'logo_mime' => null,
+            ];
+            if (!empty($maquiladoraRaw['logo'])) {
+                $maquiladora['logo_base64'] = base64_encode($maquiladoraRaw['logo']);
+                $mime = null;
+                try {
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mime = $finfo->buffer($maquiladoraRaw['logo']);
+                } catch (\Throwable $e) {
+                    $mime = null;
+                }
+                $maquiladora['logo_mime'] = $mime ?: 'image/jpeg';
+            }
+
+            $html = view('modulos/pedido_pdf', [
+                'pedido' => $pedido,
+                'cliente' => $cliente,
+                'diseno' => $diseno,
+                'tallas' => $tallas,
+                'op_cantidadPlan' => $op_cantidadPlan,
+                'op_fechaInicioPlan' => $op_fechaInicioPlan,
+                'op_fechaFinPlan' => $op_fechaFinPlan,
+                'maquiladora' => $maquiladora,
+            ]);
+
+            $options = new \Dompdf\Options();
+            $options->set('isRemoteEnabled', true);
+            $options->set('isHtml5ParserEnabled', true);
+            $dompdf = new \Dompdf\Dompdf($options);
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->setPaper('letter', 'portrait');
+            $dompdf->render();
+
+            $pdfOutput = $dompdf->output();
+            return $this->response
+                ->setHeader('Content-Disposition', 'inline; filename="Pedido_' . (($detalle['folio'] ?? '') !== '' ? $detalle['folio'] : (string) $id) . '.pdf"')
+                ->setContentType('application/pdf')
+                ->setBody($pdfOutput);
+        } catch (\Throwable $e) {
+            log_message('error', 'Error al generar PDF del pedido: ' . $e->getMessage());
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Error al generar PDF']);
+        }
+    }
+
     /**
      * Generar Excel del pedido
      */

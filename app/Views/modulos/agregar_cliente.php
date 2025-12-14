@@ -168,9 +168,8 @@
                                 <tr>
                                     <td colspan="5" class="text-center">
                                         <div class="spinner-border spinner-border-sm" role="status">
-                                            <span class="visually-hidden">Cargando...</span>
+                                            <span class="visually-hidden"></span>
                                         </div>
-                                        Cargando clasificaciones...
                                     </td>
                                 </tr>
                             </tbody>
@@ -240,7 +239,7 @@
     <script>
         $(document).ready(function () {
             const langES = {
-                "sProcessing":     "Procesando...",
+                "sProcessing":     "",
                 "sLengthMenu":     "Mostrar _MENU_ registros",
                 "sZeroRecords":    "No se encontraron resultados",
                 "sEmptyTable":     "Ningún dato disponible en esta tabla",
@@ -248,7 +247,7 @@
                 "sInfoEmpty":      "Mostrando 0 a 0 de 0",
                 "sInfoFiltered":   "(filtrado de _MAX_)",
                 "sSearch":         "Buscar:",
-                "sLoadingRecords": "Cargando...",
+                "sLoadingRecords": "",
                 "oPaginate": {
                     "sFirst":    "Primero",
                     "sLast":     "Último",
@@ -285,7 +284,7 @@
 
             // Cargar datos en la tabla
             function cargarClientes() {
-                console.log('Cargando clientes...');
+                console.log('');
                 const tbody = document.getElementById('clientes-body');
                 const fmt = (v) => v == null ? '' : String(v);
                 const toDate = (v) => {
@@ -306,7 +305,7 @@
                 .then(data => {
                     console.log('Datos recibidos:', data);
                     const items = Array.isArray(data) ? data : [];
-                
+
                 // Limpiar tabla
                 tabla.clear().draw();
 
@@ -718,7 +717,7 @@
                     select.empty();
                     select.append($('<option>', {
                         value: '',
-                        text: 'Seleccionar...',
+                        text: '',
                         selected: !selectedId
                     }));
                     
@@ -764,7 +763,7 @@
             // Función para cargar todas las clasificaciones en el modal
             async function cargarTodasClasificaciones() {
                 const tbody = $('#clasificaciones-body');
-                tbody.html('<tr><td colspan="5" class="text-center"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Cargando...</span></div> Cargando clasificaciones...</td></tr>');
+                tbody.html('<tr><td colspan="5" class="text-center"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden"></span></div></td></tr>');
                 
                 try {
                     const response = await fetch('<?= site_url('api/clientes/clasificaciones') ?>', {
@@ -1038,7 +1037,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">Clasificación</label>
                                 <select class="form-control" name="clasificacionId" id="selectClasificacion" required>
-                                    <option value="">Cargando clasificaciones...</option>
+                                    <option value=""></option>
                                 </select>
                             </div>
                             <div class="col-12"><hr class="my-2"></div>

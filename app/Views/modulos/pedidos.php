@@ -46,12 +46,12 @@
                         <div class="col-md-8">
                             <label class="form-label">Seleccionar cliente</label>
                             <select class="form-select" id="pa-cliente-select">
-                                <option value="">Cargando catálogo...</option>
+                                <option value=""></option>
                             </select>
                         </div>
                         <div class="col-md-4 text-end">
                             <div id="pa-cli-loading" class="spinner-border spinner-border-sm text-primary" role="status" style="display:none;">
-                                <span class="visually-hidden">Cargando...</span>
+                                <span class="visually-hidden"></span>
                             </div>
                         </div>
                     </div>
@@ -145,7 +145,7 @@
                         </div>
                         <div class="col-auto">
                             <div id="pa-dis-loading" class="spinner-border spinner-border-sm text-primary" role="status" style="display:none;">
-                                <span class="visually-hidden">Cargando...</span>
+                                <span class="visually-hidden"></span>
                             </div>
                         </div>
                     </div>
@@ -498,7 +498,7 @@
                         <div class="col-12">
                             <label for="pe-diseno" class="form-label">Diseño / Modelo</label>
                             <select class="form-select" id="pe-diseno" name="disenoId" required>
-                                <option value="">Cargando diseños...</option>
+                                <option value=""></option>
                             </select>
                             <div class="form-text">Selecciona el diseño para este pedido.</div>
                         </div>
@@ -607,9 +607,9 @@
             <div class="modal-body p-0">
                 <div id="pedido-documento-loading" class="text-center p-5">
                     <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Cargando documento...</span>
+                        <span class="visually-hidden"></span>
                     </div>
-                    <p class="mt-2">Cargando documento PDF...</p>
+                    <p class="mt-2"></p>
                 </div>
                 <iframe id="pedido-documento-iframe" src="" style="width: 100%; height: 80vh; border: none; display: none;"></iframe>
             </div>
@@ -940,7 +940,7 @@ function cargarTallasEnEdicion(tallas) {
     // Función para agregar filas una vez que los catálogos estén listos
     const agregarFilas = () => {
         if (tallas && tallas.length > 0) {
-            console.log('Cargando tallas en el modal:', tallas);
+            console.log('', tallas);
             tallas.forEach(talla => {
                 // Aceptar tanto nombre_sexo/nombre_talla como sexo_nombre/talla_nombre
                 const nombreSexo  = talla.nombre_sexo || talla.sexo_nombre || '';
@@ -981,7 +981,7 @@ function cargarTallasEnEdicion(tallas) {
         agregarFilas();
     } else {
         // Si no están cargados, cargarlos primero
-        console.log('Cargando catálogos antes de mostrar tallas...');
+        console.log('');
         cargarCatalogosTallas().then(agregarFilas).catch(error => {
             console.error('Error al cargar catálogos:', error);
             // Intentar de todos modos con lo que tengamos
@@ -1198,7 +1198,7 @@ $(document).ready(function () {
             "sInfoEmpty":      "Mostrando 0 a 0 de 0",
             "sInfoFiltered":   "(filtrado de _MAX_)",
             "sSearch":         "Buscar:",
-            "sLoadingRecords": "Cargando...",
+            "sLoadingRecords": "",
             "oPaginate": {
                 "sFirst":    "Primero",
                 "sLast":     "Último",
@@ -1677,7 +1677,7 @@ $(document).ready(function () {
         }
 
         $('#pedidoAddModal').on('show.bs.modal', function(){
-            $('#pa-cliente-select').empty().append('<option value="">Cargando catálogo...</option>');
+            $('#pa-cliente-select').empty().append('<option value=""></option>');
             $('#pa-cli-nombre, #pa-cli-email, #pa-cli-telefono').val('');
             $('#pa-dir-calle, #pa-dir-numext, #pa-dir-numint, #pa-dir-ciudad, #pa-dir-estado, #pa-dir-cp, #pa-dir-pais, #pa-dir-resumen').val('');
             $('#pa-cla-nombre, #pa-cla-descripcion').val('');
@@ -2213,7 +2213,7 @@ $(document).ready(function () {
 
                 // Cargar las tallas si existen
                 if (data.tallas && data.tallas.length > 0) {
-                    console.log('Cargando tallas en el modal:', data.tallas);
+                    console.log('', data.tallas);
                     cargarTallasEnEdicion(data.tallas);
                 } else {
                     console.log('No se encontraron tallas para este pedido');
@@ -2387,7 +2387,7 @@ $(document).ready(function () {
 
 
             // Mostrar loading o estado intermedio
-            $('#pe-preview-nombre').text('Cargando...');
+            $('#pe-preview-nombre').text('');
             $container.slideDown();
 
             $.getJSON('<?= base_url('modulo1/disenos') ?>/' + id + '/json?t=' + Date.now())
@@ -2455,7 +2455,7 @@ $(document).ready(function () {
             cargarCatalogosTallas();
 
             // Mostrar loading
-            Swal.fire({title:'Cargando datos...', didOpen:()=>Swal.showLoading()});
+            Swal.fire({title:'', didOpen:()=>Swal.showLoading()});
 
             // Cargar datos del pedido y lista de diseños en paralelo
             $.when(
@@ -2816,10 +2816,12 @@ $(document).ready(function () {
             const $iframe = $('#pedido-documento-iframe');
             const $downloadPdf = $('#pedido-documento-download-pdf');
             const $downloadExcel = $('#pedido-documento-download-excel');
+            const loadTimeoutMs = 15000;
             
             // Mostrar loading y ocultar iframe
             $loading.show();
             $iframe.hide();
+            $iframe.off('load');
             
             // URLs del PDF y Excel
             const pdfUrl = '<?= base_url('modulo1/pedido') ?>/' + id + '/pdf';
@@ -2835,7 +2837,15 @@ $(document).ready(function () {
             $downloadExcel.prop('disabled', false).html('<i class="bi bi-file-earmark-excel"></i> Descargar Excel');
             
             // Cuando el iframe cargue, ocultar loading y mostrar iframe
-            $iframe.on('load', function(){
+            const timeoutId = setTimeout(function(){
+                if ($iframe.is(':hidden')) {
+                    $loading.hide();
+                    $iframe.show();
+                }
+            }, loadTimeoutMs);
+
+            $iframe.one('load', function(){
+                clearTimeout(timeoutId);
                 $loading.hide();
                 $iframe.show();
             });
@@ -2852,7 +2862,7 @@ $(document).ready(function () {
             // Bloquear botón
             $btn.prop('disabled', true);
             const originalHtml = $btn.html();
-            $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Descargando...');
+            $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>');
             
             // Re-habilitar después de 5 segundos (tiempo suficiente para iniciar descarga)
             setTimeout(function(){
@@ -2871,7 +2881,7 @@ $(document).ready(function () {
             // Bloquear botón
             $btn.prop('disabled', true);
             const originalHtml = $btn.html();
-            $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Descargando...');
+            $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>');
             
             // Re-habilitar después de 5 segundos (tiempo suficiente para iniciar descarga)
             setTimeout(function(){
@@ -2898,13 +2908,16 @@ $(document).ready(function () {
                 min-height: 200px;
             }
             .loading:after {
-                content: "Cargando...";
+                content: "";
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
                 color: #666;
                 font-weight: bold;
+            }
+            .spinner-border {
+                border-right-color: transparent !important;
             }
             .pe-talla-row td {
                 vertical-align: middle;

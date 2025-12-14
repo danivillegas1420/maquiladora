@@ -631,7 +631,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div id="bitacoraMatrizLoading" class="text-muted">Cargando...</div>
+                <div id="bitacoraMatrizLoading" class="text-muted"></div>
                 <div id="bitacoraMatrizEmpty" class="text-muted" style="display:none;">Sin registros.</div>
                 <div id="bitacoraMatrizContent" style="display:none;"></div>
             </div>
@@ -723,7 +723,7 @@
             limpiarResumenRegistrado();
 
             $.ajax({
-                url: `<?= base_url('modulo3/api/control-bultos/operacion') ?>/${operacionId}/resumen-produccion`,
+                url: `<?= base_url('modulo3/api/control-bultos') ?>/${operacionId}/resumen-produccion`,
                 type: 'GET',
                 success: function (response) {
                     if (!response || !response.ok) {
@@ -906,7 +906,7 @@
                 "infoPostFix": "",
                 "thousands": ",",
                 "lengthMenu": "Mostrar _MENU_ Entradas",
-                "loadingRecords": "Cargando...",
+                "loadingRecords": "",
                 "processing": "Procesando...",
                 "search": "Buscar:",
                 "zeroRecords": "Sin resultados encontrados",
@@ -1232,7 +1232,7 @@
                     }
                 })
                 .catch(err => {
-                    console.error('Error cargando bitácora:', err);
+                    console.error('Error:', err);
                     $('#bitacoraMatrizLoading').hide();
                     $('#bitacoraMatrizEmpty').text('No se pudo cargar la bitácora: ' + (err?.message || err)).show();
                 });

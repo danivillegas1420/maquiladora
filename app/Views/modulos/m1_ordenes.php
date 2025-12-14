@@ -516,9 +516,9 @@
                             if (!isNaN(d)) { try { $modal.find('#asg-hasta').val(toLocalInput(d)); } catch(e) {} }
                         }
                     });
-                $list.html('<div class="text-muted">Cargando empleados...</div>');
-                $listCorte.html('<div class="text-muted">Cargando personal de Corte...</div>');
-                $tbody.html('<tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>');
+                $list.html('<div class="text-muted"></div>');
+                $listCorte.html('<div class="text-muted"></div>');
+                $tbody.html('<tr><td colspan="5" class="text-center text-muted"></td></tr>');
                 $.getJSON('<?= base_url('modulo1/ordenes') ?>/' + opId + '/asignaciones?t=' + Date.now())
                     .done(function(data){
                         const emps = data.empleados || [];
@@ -796,13 +796,13 @@
                 const setText = (sel, val) => $modal.find(sel).text(val);
                 
                 // Inicializar campos
-                setText('#op-folio','Cargando...'); setText('#op-status','Cargando...');
-                setText('#op-cant','Cargando...'); setText('#op-ini','Cargando...'); setText('#op-fin','Cargando...');
-                setText('#op-cliente','Cargando...'); setText('#op-total','Cargando...');
-                setText('#op-dis-codigo','Cargando...'); setText('#op-dis-nombre','Cargando...'); 
-                setText('#op-dis-descripcion','Cargando...'); setText('#op-dis-version','Cargando...'); 
-                setText('#op-dis-fecha','Cargando...'); setText('#op-dis-aprobado','Cargando...'); 
-                setText('#op-dis-precio','Cargando...'); setText('#op-dis-notas','');
+                setText('#op-folio',''); setText('#op-status','');
+                setText('#op-cant',''); setText('#op-ini',''); setText('#op-fin','');
+                setText('#op-cliente',''); setText('#op-total','');
+                setText('#op-dis-codigo',''); setText('#op-dis-nombre',''); 
+                setText('#op-dis-descripcion',''); setText('#op-dis-version',''); 
+                setText('#op-dis-fecha',''); setText('#op-dis-aprobado',''); 
+                setText('#op-dis-precio',''); setText('#op-dis-notas','');
 
                 const $car = $('#opDisCarousel'), $inner = $car.find('.carousel-inner');
                 $inner.empty(); $car.hide(); $('#op-dis-archivos-na').show();
