@@ -38,7 +38,10 @@ class ControlBultosModel extends Model
             ->orderBy('cb.created_at', 'DESC');
 
         if ($maquiladoraId) {
-            $builder->where('cb.idmaquiladora', $maquiladoraId);
+            $builder->groupStart()
+                ->where('op.maquiladoraID', (int) $maquiladoraId)
+                ->orWhere('op.maquiladoraCompartidaID', (int) $maquiladoraId)
+                ->groupEnd();
         }
 
         $controles = $builder->get()->getResultArray();

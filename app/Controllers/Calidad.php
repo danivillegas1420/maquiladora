@@ -39,39 +39,61 @@ class Calidad extends BaseController
 
         $mR = new ReprocesoModel();
         $db = \Config\Database::connect();
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
 
         // Desechos - todos los registros con resultado 'rechazo'
-        $desp = $db->table('reproceso r')
+        $despBuilder = $db->table('reproceso r')
             ->select('r.id, r.cantidad, r.fecha, r.accion AS observaciones, 
                       COALESCE(ordprod.folio, CAST(i.ordenProduccionId AS CHAR), "N/A") AS op')
             ->join('inspeccion i', 'i.id = r.inspeccionId', 'left')
             ->join('orden_produccion ordprod', 'ordprod.id = i.ordenProduccionId', 'left')
             ->where('LOWER(i.resultado)', 'rechazo')
-            ->orderBy('r.fecha', 'DESC')
-            ->get()
-            ->getResultArray();
+            ->orderBy('r.fecha', 'DESC');
+
+        if ($maquiladoraId) {
+            $despBuilder->groupStart()
+                ->where('ordprod.maquiladoraID', (int) $maquiladoraId)
+                ->orWhere('ordprod.maquiladoraCompartidaID', (int) $maquiladoraId)
+                ->groupEnd();
+        }
+
+        $desp = $despBuilder->get()->getResultArray();
 
         // Reprocesos - todos los registros con resultado 'reproceso'
-        $rep = $db->table('reproceso r')
+        $repBuilder = $db->table('reproceso r')
             ->select('r.id, r.accion AS tarea, r.cantidad AS pendientes, 
                       r.fecha AS eta, COALESCE(ordprod.folio, CAST(i.ordenProduccionId AS CHAR), "N/A") AS op')
             ->join('inspeccion i', 'i.id = r.inspeccionId', 'left')
             ->join('orden_produccion ordprod', 'ordprod.id = i.ordenProduccionId', 'left')
             ->where('LOWER(i.resultado)', 'reproceso')
-            ->orderBy('r.fecha', 'DESC')
-            ->get()
-            ->getResultArray();
+            ->orderBy('r.fecha', 'DESC');
+
+        if ($maquiladoraId) {
+            $repBuilder->groupStart()
+                ->where('ordprod.maquiladoraID', (int) $maquiladoraId)
+                ->orWhere('ordprod.maquiladoraCompartidaID', (int) $maquiladoraId)
+                ->groupEnd();
+        }
+
+        $rep = $repBuilder->get()->getResultArray();
 
         // Cargar órdenes de producción activas para el dropdown
-        $ordenesProduccion = $db->table('orden_produccion op')
+        $ordenesBuilder = $db->table('orden_produccion op')
             ->select('op.id, op.folio, c.nombre as cliente_nombre')
             ->join('orden_compra oc', 'oc.id = op.ordenCompraId', 'left')
             ->join('cliente c', 'c.id = oc.clienteId', 'left')
             ->whereIn('op.status', ['pendiente', 'en_proceso', 'activa'])
             ->orderBy('op.folio', 'DESC')
-            ->limit(100) // Limitar a las últimas 100 órdenes activas
-            ->get()
-            ->getResultArray();
+            ->limit(100); // Limitar a las últimas 100 órdenes activas
+
+        if ($maquiladoraId) {
+            $ordenesBuilder->groupStart()
+                ->where('op.maquiladoraID', (int) $maquiladoraId)
+                ->orWhere('op.maquiladoraCompartidaID', (int) $maquiladoraId)
+                ->groupEnd();
+        }
+
+        $ordenesProduccion = $ordenesBuilder->get()->getResultArray();
 
         return view('modulos/desperdicios', [
             'title' => 'Desperdicios & Reprocesos',
@@ -354,12 +376,28 @@ class Calidad extends BaseController
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
 
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+
         $row = (new ReprocesoModel())
             ->select('reproceso.*, inspeccion.ordenProduccionId AS op, inspeccion.resultado, inspeccion.observaciones')
             ->join('inspeccion', 'inspeccion.id = reproceso.inspeccionId')
             ->where('reproceso.id', $id)
             ->groupBy('reproceso.id')
             ->first();
+
+        if ($row && $maquiladoraId && !empty($row['op'])) {
+            $db = \Config\Database::connect();
+            $opRow = $db->table('orden_produccion')
+                ->select('maquiladoraID, maquiladoraCompartidaID')
+                ->where('id', (int) $row['op'])
+                ->get()
+                ->getRowArray();
+            $own = (int) ($opRow['maquiladoraID'] ?? 0);
+            $sharedTo = (int) ($opRow['maquiladoraCompartidaID'] ?? 0);
+            if ($own !== (int) $maquiladoraId && $sharedTo !== (int) $maquiladoraId) {
+                return $this->response->setStatusCode(403)->setBody('Acceso denegado');
+            }
+        }
 
         return $row ? $this->response->setJSON($row)
             : $this->response->setStatusCode(404)->setBody('No encontrado');
@@ -371,12 +409,28 @@ class Calidad extends BaseController
             return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
 
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+
         $row = (new ReprocesoModel())
             ->select('reproceso.*, inspeccion.ordenProduccionId AS op')
             ->join('inspeccion', 'inspeccion.id = reproceso.inspeccionId')
             ->where('reproceso.id', $id)
             ->groupBy('reproceso.id')
             ->first();
+
+        if ($row && $maquiladoraId && !empty($row['op'])) {
+            $db = \Config\Database::connect();
+            $opRow = $db->table('orden_produccion')
+                ->select('maquiladoraID, maquiladoraCompartidaID')
+                ->where('id', (int) $row['op'])
+                ->get()
+                ->getRowArray();
+            $own = (int) ($opRow['maquiladoraID'] ?? 0);
+            $sharedTo = (int) ($opRow['maquiladoraCompartidaID'] ?? 0);
+            if ($own !== (int) $maquiladoraId && $sharedTo !== (int) $maquiladoraId) {
+                return $this->response->setStatusCode(403)->setBody('Acceso denegado');
+            }
+        }
 
         return $row ? $this->response->setJSON($row)
             : $this->response->setStatusCode(404)->setBody('No encontrado');

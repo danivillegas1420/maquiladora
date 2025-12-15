@@ -17,6 +17,49 @@ class Inspeccion extends BaseController
         $this->inspeccionModel = new InspeccionModel();
         helper(['form', 'url']);
     }
+
+    private function canAccessOrdenProduccion(?int $opId): bool
+    {
+        if (!$opId || $opId <= 0) {
+            return false;
+        }
+
+        $maquiladoraId = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+        if (!$maquiladoraId) {
+            return true;
+        }
+
+        $db = \Config\Database::connect();
+        $row = $db->table('orden_produccion')
+            ->select('maquiladoraID, maquiladoraCompartidaID')
+            ->where('id', (int) $opId)
+            ->get()
+            ->getRowArray();
+
+        if (!$row) {
+            return false;
+        }
+
+        return ((int) ($row['maquiladoraID'] ?? 0) === (int) $maquiladoraId)
+            || ((int) ($row['maquiladoraCompartidaID'] ?? 0) === (int) $maquiladoraId);
+    }
+
+    private function canAccessInspeccion(int $inspeccionId): bool
+    {
+        if ($inspeccionId <= 0) {
+            return false;
+        }
+
+        $db = \Config\Database::connect();
+        $row = $db->table('inspeccion')
+            ->select('ordenProduccionId')
+            ->where('id', $inspeccionId)
+            ->get()
+            ->getRowArray();
+
+        $opId = (int) ($row['ordenProduccionId'] ?? 0);
+        return $this->canAccessOrdenProduccion($opId);
+    }
     public function index()
     {
         if (!can('menu.inspeccion')) {
@@ -36,7 +79,10 @@ class Inspeccion extends BaseController
         // Filtrar por maquiladora si está en sesión
         $maquiladoraId = session()->get('maquiladora_id');
         if ($maquiladoraId) {
-            $builder->where('op.maquiladoraID', (int)$maquiladoraId);
+            $builder->groupStart()
+                ->where('op.maquiladoraID', (int)$maquiladoraId)
+                ->orWhere('op.maquiladoraCompartidaID', (int)$maquiladoraId)
+                ->groupEnd();
         }
 
         $inspecciones = $builder->get()->getResultArray();
@@ -153,6 +199,13 @@ class Inspeccion extends BaseController
                 return $this->response->setStatusCode(400)->setJSON([
                     'success' => false,
                     'message' => 'Datos inválidos'
+                ]);
+            }
+
+            if (!$this->canAccessInspeccion($id)) {
+                return $this->response->setStatusCode(403)->setJSON([
+                    'success' => false,
+                    'message' => 'Acceso denegado'
                 ]);
             }
 
@@ -321,6 +374,11 @@ class Inspeccion extends BaseController
             'fecha_creacion' => date('Y-m-d H:i:s')
         ];
 
+        $opId = (int) ($data['ordenProduccionId'] ?? 0);
+        if (!$this->canAccessOrdenProduccion($opId)) {
+            return redirect()->back()->withInput()->with('error', 'Acceso denegado');
+        }
+
         $this->inspeccionModel->insert($data);
 
         return redirect()->to(base_url('inspeccion'))
@@ -331,6 +389,10 @@ class Inspeccion extends BaseController
     {
         if (!$this->inspeccionModel->find($id)) {
             throw new PageNotFoundException('No se encontró la inspección solicitada');
+        }
+
+        if (!$this->canAccessInspeccion((int) $id)) {
+            return redirect()->back()->with('error', 'Acceso denegado');
         }
 
         $rules = [
@@ -366,6 +428,10 @@ class Inspeccion extends BaseController
             throw new PageNotFoundException('No se encontró la inspección solicitada');
         }
 
+        if (!$this->canAccessInspeccion((int) $id)) {
+            return redirect()->back()->with('error', 'Acceso denegado');
+        }
+
         $this->inspeccionModel->delete($id);
 
         return redirect()->to(base_url('inspeccion'))
@@ -382,6 +448,10 @@ class Inspeccion extends BaseController
 
         if (!$inspeccion) {
             throw new PageNotFoundException('Inspección no encontrada');
+        }
+
+        if (!$this->canAccessOrdenProduccion((int) ($inspeccion['ordenProduccionId'] ?? 0))) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
         }
 
         return view('modulos/inspeccion_evaluar', [
@@ -411,6 +481,13 @@ class Inspeccion extends BaseController
                 'success' => false,
                 'message' => 'Inspección no encontrada'
             ])->setStatusCode(404);
+        }
+
+        if (!$this->canAccessOrdenProduccion((int) ($inspeccion['ordenProduccionId'] ?? 0))) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Acceso denegado'
+            ])->setStatusCode(403);
         }
 
         // Obtener los datos del formulario

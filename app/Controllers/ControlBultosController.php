@@ -19,6 +19,64 @@ class ControlBultosController extends BaseController
         $this->db = \Config\Database::connect();
     }
 
+    private function canAccessOrdenProduccion(?int $opId): bool
+    {
+        if (!$opId || $opId <= 0) {
+            return false;
+        }
+
+        $session = session();
+        $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
+        if (!$maquiladoraId) {
+            return true;
+        }
+
+        $row = $this->db->table('orden_produccion')
+            ->select('maquiladoraID, maquiladoraCompartidaID')
+            ->where('id', (int) $opId)
+            ->get()
+            ->getRowArray();
+
+        if (!$row) {
+            return false;
+        }
+
+        return ((int) ($row['maquiladoraID'] ?? 0) === (int) $maquiladoraId)
+            || ((int) ($row['maquiladoraCompartidaID'] ?? 0) === (int) $maquiladoraId);
+    }
+
+    private function canAccessControlBulto(?int $controlBultoId): bool
+    {
+        if (!$controlBultoId || $controlBultoId <= 0) {
+            return false;
+        }
+
+        $row = $this->db->table('control_bultos')
+            ->select('ordenProduccionId')
+            ->where('id', (int) $controlBultoId)
+            ->get()
+            ->getRowArray();
+
+        $opId = (int) ($row['ordenProduccionId'] ?? 0);
+        return $this->canAccessOrdenProduccion($opId);
+    }
+
+    private function canAccessOperacionControl(?int $operacionControlId): bool
+    {
+        if (!$operacionControlId || $operacionControlId <= 0) {
+            return false;
+        }
+
+        $row = $this->db->table('operaciones_control')
+            ->select('controlBultoId')
+            ->where('id', (int) $operacionControlId)
+            ->get()
+            ->getRowArray();
+
+        $controlBultoId = (int) ($row['controlBultoId'] ?? 0);
+        return $this->canAccessControlBulto($controlBultoId);
+    }
+
     /**
      * Vista principal
      */
@@ -90,8 +148,25 @@ class ControlBultosController extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
         }
 
+        $session = session();
+        $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
+
         $controlModel = new ControlBultosModel();
         $control = $controlModel->getDetallado($id);
+
+        if ($control && $maquiladoraId) {
+            $opRow = $this->db->table('orden_produccion')
+                ->select('maquiladoraID, maquiladoraCompartidaID')
+                ->where('id', (int) ($control['ordenProduccionId'] ?? 0))
+                ->get()
+                ->getRowArray();
+
+            $own = (int) ($opRow['maquiladoraID'] ?? 0);
+            $sharedTo = (int) ($opRow['maquiladoraCompartidaID'] ?? 0);
+            if ($own !== (int) $maquiladoraId && $sharedTo !== (int) $maquiladoraId) {
+                return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+            }
+        }
 
         if (!$control) {
             return $this->response->setStatusCode(404)->setJSON([
@@ -133,6 +208,13 @@ class ControlBultosController extends BaseController
                 return $this->response->setJSON([
                     'ok' => false,
                     'message' => 'Faltan datos requeridos'
+                ]);
+            }
+
+            if (!$this->canAccessOrdenProduccion((int) $ordenProduccionId)) {
+                return $this->response->setStatusCode(403)->setJSON([
+                    'ok' => false,
+                    'message' => 'Acceso denegado'
                 ]);
             }
 
@@ -685,6 +767,13 @@ class ControlBultosController extends BaseController
             ]);
         }
 
+        if (!$this->canAccessOrdenProduccion((int) $data['ordenProduccionId'])) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'ok' => false,
+                'message' => 'Acceso denegado'
+            ]);
+        }
+
         // Si no viene el folio de la orden, buscarlo
         if (empty($data['orden'])) {
             $ordenModel = new OrdenProduccionModel();
@@ -725,6 +814,10 @@ class ControlBultosController extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
         }
 
+        if (!$this->canAccessControlBulto((int) $id)) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+
         $controlModel = new ControlBultosModel();
 
         $data = [
@@ -752,6 +845,10 @@ class ControlBultosController extends BaseController
     public function eliminar($id)
     {
         if (!can('menu.inspeccion')) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+
+        if (!$this->canAccessControlBulto((int) $id)) {
             return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
         }
 
@@ -798,6 +895,13 @@ class ControlBultosController extends BaseController
             return $this->response->setJSON([
                 'ok' => false,
                 'message' => 'Operación y cantidades por empleado son requeridos'
+            ]);
+        }
+
+        if (!$this->canAccessOperacionControl((int) $operacionControlId)) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'ok' => false,
+                'message' => 'Acceso denegado'
             ]);
         }
 
@@ -1271,6 +1375,13 @@ class ControlBultosController extends BaseController
             ]);
         }
 
+        if (!$this->canAccessOperacionControl((int) $operacionControlId)) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'ok' => false,
+                'message' => 'Acceso denegado'
+            ]);
+        }
+
         // Registrar en la tabla de registros_produccion (sistema existente)
         $registroModel = new RegistroProduccionModel();
         $dataRegistro = [
@@ -1334,6 +1445,13 @@ class ControlBultosController extends BaseController
             return $this->response->setJSON([
                 'ok' => false,
                 'message' => 'Datos inválidos'
+            ]);
+        }
+
+        if (!$this->canAccessControlBulto((int) $controlBultoId)) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'ok' => false,
+                'message' => 'Acceso denegado'
             ]);
         }
 
