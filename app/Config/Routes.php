@@ -86,6 +86,8 @@ $routes->post('modulo11/actualizar_usuario', 'Modulos::m11_actualizar_usuario');
 $routes->get('almacen/inventario', 'AlmacenController::inventario');
 $routes->get('api/almacenes', 'AlmacenController::apiAlmacenes');
 $routes->get('api/ubicaciones', 'AlmacenController::apiUbicaciones');
+$routes->post('api/ubicaciones/crear', 'AlmacenController::apiCrearUbicacion');
+$routes->post('api/almacenes/crear', 'AlmacenController::apiCrearAlmacen');
 $routes->get('api/inventario', 'AlmacenController::apiInventario');
 $routes->get('api/inventario/lotes', 'AlmacenController::apiLotes');
 $routes->get('api/inventario/movimientos/(:num)', 'AlmacenController::apiMovimientos/$1');

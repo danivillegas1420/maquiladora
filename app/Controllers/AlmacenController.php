@@ -49,6 +49,154 @@ class AlmacenController extends BaseController
         ]);
     }
 
+    public function apiCrearUbicacion()
+    {
+        $in = $this->request->getJSON(true) ?: $this->request->getPost();
+
+        $almacenId = (int) ($in['almacenId'] ?? 0);
+        $pasillo = trim((string) ($in['pasillo'] ?? ''));
+        $estante = trim((string) ($in['estante'] ?? ''));
+        $nivel = trim((string) ($in['nivel'] ?? ''));
+        $letra = trim((string) ($in['letra'] ?? ''));
+        $descripcion = trim((string) ($in['descripcion'] ?? ''));
+        $codigoManual = trim((string) ($in['codigo'] ?? ''));
+
+        if (!$almacenId) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'ok' => false,
+                'message' => 'Debe seleccionar un almacén'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+
+        // Generar código automático si no se proporciona
+        if ($codigoManual === '') {
+            $parts = [];
+            if ($pasillo !== '')
+                $parts[] = 'P' . $pasillo;
+            if ($estante !== '')
+                $parts[] = 'E' . $estante;
+            if ($nivel !== '')
+                $parts[] = 'N' . $nivel;
+            if ($letra !== '')
+                $parts[] = $letra;
+
+            $codigo = !empty($parts) ? implode('-', $parts) : 'UB-' . time();
+        } else {
+            $codigo = $codigoManual;
+        }
+
+        // Verificar que el código no exista en ese almacén
+        $existe = $db->table('ubicacion')
+            ->where('almacenId', $almacenId)
+            ->where('codigo', $codigo)
+            ->countAllResults();
+
+        if ($existe > 0) {
+            return $this->response->setStatusCode(409)->setJSON([
+                'ok' => false,
+                'message' => 'Ya existe una ubicación con ese código en este almacén'
+            ]);
+        }
+
+        // Insertar nueva ubicación
+        $data = [
+            'almacenId' => $almacenId,
+            'codigo' => $codigo,
+            'pasillo' => $pasillo ?: null,
+            'estante' => $estante ?: null,
+            'nivel' => $nivel ?: null,
+            'letra' => $letra ?: null,
+            'descripcion' => $descripcion ?: null,
+            'activo' => 1
+        ];
+
+        try {
+            $db->table('ubicacion')->insert($data);
+            $ubicacionId = $db->insertID();
+
+            return $this->response->setJSON([
+                'ok' => true,
+                'message' => 'Ubicación creada exitosamente',
+                'data' => [
+                    'id' => $ubicacionId,
+                    'codigo' => $codigo
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok' => false,
+                'message' => 'Error al crear la ubicación: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    public function apiCrearAlmacen()
+    {
+        $in = $this->request->getJSON(true) ?: $this->request->getPost();
+
+        $codigo = trim((string) ($in['codigo'] ?? ''));
+        $nombre = trim((string) ($in['nombre'] ?? ''));
+
+        if ($codigo === '' || $nombre === '') {
+            return $this->response->setStatusCode(422)->setJSON([
+                'ok' => false,
+                'message' => 'Código y nombre son obligatorios'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+
+        // Verificar que el código no exista
+        $existe = $db->table('almacen')
+            ->where('codigo', $codigo)
+            ->countAllResults();
+
+        if ($existe > 0) {
+            return $this->response->setStatusCode(409)->setJSON([
+                'ok' => false,
+                'message' => 'Ya existe un almacén con ese código'
+            ]);
+        }
+
+        // Insertar nuevo almacén
+        $data = [
+            'codigo' => $codigo,
+            'nombre' => $nombre,
+            'activo' => 1
+        ];
+
+        // Si la tabla tiene maquiladoraID, asociarlo
+        try {
+            $maquiladoraId = session()->get('maquiladora_id');
+            if ($maquiladoraId && $this->inv->tableHas('almacen', 'maquiladoraID')) {
+                $data['maquiladoraID'] = (int) $maquiladoraId;
+            }
+        } catch (\Throwable $e) {
+        }
+
+        try {
+            $db->table('almacen')->insert($data);
+            $almacenId = $db->insertID();
+
+            return $this->response->setJSON([
+                'ok' => true,
+                'message' => 'Almacén creado exitosamente',
+                'data' => [
+                    'id' => $almacenId,
+                    'codigo' => $codigo,
+                    'nombre' => $nombre
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'ok' => false,
+                'message' => 'Error al crear el almacén: ' . $e->getMessage()
+            ]);
+        }
+    }
+
     /* ===== INVENTARIO ===== */
     public function apiInventario()
     {

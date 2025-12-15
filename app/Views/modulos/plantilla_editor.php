@@ -24,12 +24,21 @@
     }
 
     .table-editor td.readonly {
-        background-color: #f8f9fa;
         padding: 4px 8px !important;
+        font-weight: 500;
+        color: #495057;
     }
 
     .header-input {
         font-weight: bold;
+        border: none;
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .input-group-text {
+        background: transparent;
         border: none;
         border-bottom: 1px solid #dee2e6;
         border-radius: 0;

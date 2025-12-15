@@ -66,9 +66,6 @@
         font-size: 1.5rem;
     }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
@@ -78,9 +75,15 @@
         <h1 class="me-3">Inventario de Almacenes</h1>
         <span class="badge bg-primary">Logística / Almacén</span>
     </div>
-    <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#agregarModal">
-        <i class="bi bi-plus-circle me-1"></i> Agregar
-    </button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal"
+            data-bs-target="#gestionAlmacenesModal">
+            <i class="bi bi-building me-1"></i> Gestionar Almacenes
+        </button>
+        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#agregarModal">
+            <i class="bi bi-plus-circle me-1"></i> Agregar
+        </button>
+    </div>
 </div>
 
 <!-- KPIs y Gráfica -->
@@ -461,6 +464,224 @@
     </div>
 </div>
 
+<!-- Modal GESTIÓN DE ALMACENES Y UBICACIONES -->
+<div class="modal fade" id="gestionAlmacenesModal" tabindex="-1" aria-labelledby="gestionAlmacenesLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="gestionAlmacenesLabel" class="modal-title"><i class="bi bi-building me-2"></i>Gestión de
+                    Almacenes y Ubicaciones</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-3" id="gestionTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="almacenes-tab" data-bs-toggle="tab"
+                            data-bs-target="#almacenes-panel" type="button" role="tab">
+                            <i class="bi bi-building"></i> Almacenes
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="ubicaciones-tab" data-bs-toggle="tab"
+                            data-bs-target="#ubicaciones-panel" type="button" role="tab">
+                            <i class="bi bi-geo-alt"></i> Ubicaciones
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="gestionTabsContent">
+                    <!-- TAB: ALMACENES -->
+                    <div class="tab-pane fade show active" id="almacenes-panel" role="tabpanel">
+                        <div class="row">
+                            <!-- Formulario Crear Almacén -->
+                            <div class="col-md-5">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-primary text-white">
+                                        <strong><i class="bi bi-plus-circle me-1"></i> Crear Nuevo Almacén</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="formCrearAlmacen">
+                                            <div class="mb-3">
+                                                <label class="form-label">Código <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="text" id="almCodigo" class="form-control"
+                                                    placeholder="Ej: ALM-01" required>
+                                                <div class="form-text">Código único para identificar el almacén</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Nombre <span
+                                                        class="text-danger">*</span></label>
+                                                <input type="text" id="almNombre" class="form-control"
+                                                    placeholder="Ej: Almacén Principal" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Ubicación Física</label>
+                                                <input type="text" id="almUbicacion" class="form-control"
+                                                    placeholder="Ej: Planta Baja, Edificio A">
+                                                <div class="form-text">Dirección o ubicación del almacén</div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Descripción</label>
+                                                <textarea id="almDescripcion" class="form-control" rows="2"
+                                                    placeholder="Información adicional..."></textarea>
+                                            </div>
+                                            <hr>
+                                            <div class="alert alert-info small mb-3">
+                                                <i class="bi bi-info-circle me-1"></i> Después de crear el almacén, ve a
+                                                la pestaña <strong>"Ubicaciones"</strong> para definir sus áreas de
+                                                almacenamiento.
+                                            </div>
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i class="bi bi-save me-1"></i> Crear Almacén
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Lista de Almacenes -->
+                            <div class="col-md-7">
+                                <div class="card shadow-sm">
+                                    <div class="card-header">
+                                        <strong><i class="bi bi-list-ul me-1"></i> Almacenes Registrados</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover" id="tablaAlmacenes">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Código</th>
+                                                        <th>Nombre</th>
+                                                        <th>Ubicación</th>
+                                                        <th class="text-center">Ubicaciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tbodyAlmacenes">
+                                                    <tr>
+                                                        <td colspan="4" class="text-center text-muted">Cargando...</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: UBICACIONES -->
+                    <div class="tab-pane fade" id="ubicaciones-panel" role="tabpanel">
+                        <div class="row">
+                            <!-- Formulario Crear Ubicación -->
+                            <div class="col-md-5">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-success text-white">
+                                        <strong><i class="bi bi-plus-circle me-1"></i> Crear Nueva Ubicación</strong>
+                                    </div>
+                                    <div class="card-body">
+                                        <form id="formCrearUbicacion">
+                                            <div class="mb-3">
+                                                <label class="form-label">Almacén <span
+                                                        class="text-danger">*</span></label>
+                                                <select id="ubicAlmacen" class="form-select" required>
+                                                    <option value="">Seleccione un almacén...</option>
+                                                </select>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-6 mb-3">
+                                                    <label class="form-label">Pasillo</label>
+                                                    <input type="text" id="ubicPasillo" class="form-control"
+                                                        placeholder="Ej: 1, 2, A">
+                                                </div>
+                                                <div class="col-6 mb-3">
+                                                    <label class="form-label">Estante</label>
+                                                    <input type="text" id="ubicEstante" class="form-control"
+                                                        placeholder="Ej: A, B, 1">
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-6 mb-3">
+                                                    <label class="form-label">Nivel</label>
+                                                    <input type="text" id="ubicNivel" class="form-control"
+                                                        placeholder="Ej: 1, 2, 3">
+                                                </div>
+                                                <div class="col-6 mb-3">
+                                                    <label class="form-label">Letra/Posición</label>
+                                                    <input type="text" id="ubicLetra" class="form-control"
+                                                        placeholder="Ej: A, B, C">
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Código Manual (opcional)</label>
+                                                <input type="text" id="ubicCodigo" class="form-control"
+                                                    placeholder="Dejar vacío para generar automáticamente">
+                                                <div class="form-text">Si se deja vacío, se generará como: P1-E2-N3-A
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Descripción</label>
+                                                <input type="text" id="ubicDescripcion" class="form-control"
+                                                    placeholder="Información adicional...">
+                                            </div>
+                                            <div class="alert alert-secondary small mb-3">
+                                                <strong>Vista previa del código:</strong>
+                                                <div id="ubicCodigoPreview" class="mt-1 fw-bold text-primary">-</div>
+                                            </div>
+                                            <button type="submit" class="btn btn-success w-100">
+                                                <i class="bi bi-save me-1"></i> Crear Ubicación
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Lista de Ubicaciones -->
+                            <div class="col-md-7">
+                                <div class="card shadow-sm">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <strong><i class="bi bi-list-ul me-1"></i> Ubicaciones Registradas</strong>
+                                        <select id="filtroAlmacenUbicaciones" class="form-select form-select-sm"
+                                            style="width: auto;">
+                                            <option value="">Todos los almacenes</option>
+                                        </select>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                            <table class="table table-sm table-hover">
+                                                <thead class="sticky-top bg-white">
+                                                    <tr>
+                                                        <th>Almacén</th>
+                                                        <th>Código</th>
+                                                        <th>Pasillo</th>
+                                                        <th>Estante</th>
+                                                        <th>Nivel</th>
+                                                        <th>Letra</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tbodyUbicaciones">
+                                                    <tr>
+                                                        <td colspan="6" class="text-center text-muted">Seleccione un
+                                                            almacén o cargue todas las ubicaciones</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal ERROR / AVISO -->
 <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -482,6 +703,9 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
@@ -650,7 +874,10 @@
             pagingType: 'numbers' // muestra 1,2,3,… en la paginación
         });
 
-        $sel.on('change', () => dt.ajax.reload());
+        $sel.on('change', () => {
+            dt.ajax.reload();
+            loadKpis(); // Reload KPIs when warehouse filter changes
+        });
 
         /* ===== VER ===== */
         $(document).on('click', '.btn-ver', function () {
@@ -1050,6 +1277,8 @@
         });
 
         /* ===== KPIs y Gráfica ===== */
+        let chartInstance = null; // Store chart instance globally
+
         async function loadKpis() {
             try {
                 const r = await fetch("<?= site_url('api/inventario/kpis') ?>");
@@ -1061,9 +1290,14 @@
                 $('#kpiBajo').text(data.kpis.stock_bajo);
                 $('#kpiCaducar').text(data.kpis.por_caducar);
 
+                // Destroy previous chart instance if it exists
+                if (chartInstance) {
+                    chartInstance.destroy();
+                }
+
                 // Render Chart
                 const ctx = document.getElementById('chartAlmacenes').getContext('2d');
-                new Chart(ctx, {
+                chartInstance = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: data.chart.map(x => x.almacen),
@@ -1161,6 +1395,258 @@
         window.addEventListener('focus', function () {
             dt.ajax.reload(null, false);
             loadKpis();
+        });
+
+        /* ===== GESTIÓN DE ALMACENES Y UBICACIONES ===== */
+
+        // Cargar almacenes en tabla
+        async function cargarTablaAlmacenes() {
+            try {
+                const r = await fetch("<?= site_url('api/almacenes') ?>");
+                const js = await r.json();
+                const almacenes = js.data || [];
+
+                const tbody = $('#tbodyAlmacenes');
+                if (!almacenes.length) {
+                    tbody.html('<tr><td colspan="4" class="text-center text-muted">No hay almacenes registrados</td></tr>');
+                    return;
+                }
+
+                const html = almacenes.map(a => `
+                    <tr>
+                        <td><strong>${a.codigo || ''}</strong></td>
+                        <td>${a.nombre || ''}</td>
+                        <td class="text-muted small">${a.ubicacion || '-'}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-success" onclick="verUbicacionesAlmacen(${a.id}, '${a.nombre}')">
+                                <i class="bi bi-geo-alt"></i> Ver
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+                tbody.html(html);
+
+                // Actualizar selectores
+                actualizarSelectoresAlmacen(almacenes);
+            } catch (e) {
+                console.error('Error cargando almacenes', e);
+            }
+        }
+
+        // Actualizar todos los selectores de almacén
+        function actualizarSelectoresAlmacen(almacenes) {
+            const selectors = ['#ubicAlmacen', '#filtroAlmacenUbicaciones'];
+            selectors.forEach(sel => {
+                const $s = $(sel);
+                const currentVal = $s.val();
+                $s.find('option:not(:first)').remove();
+                almacenes.forEach(a => {
+                    $s.append(new Option(`${a.codigo} - ${a.nombre}`, a.id));
+                });
+                if (currentVal) $s.val(currentVal);
+            });
+        }
+
+        // Crear almacén
+        $('#formCrearAlmacen').on('submit', async function (e) {
+            e.preventDefault();
+
+            const payload = {
+                codigo: $('#almCodigo').val().trim(),
+                nombre: $('#almNombre').val().trim(),
+                ubicacion: $('#almUbicacion').val().trim(),
+                descripcion: $('#almDescripcion').val().trim()
+            };
+
+            if (!payload.codigo || !payload.nombre) {
+                Swal.fire({ icon: 'warning', title: 'Atención', text: 'Código y nombre son obligatorios' });
+                return;
+            }
+
+            try {
+                const r = await fetch("<?= site_url('api/almacenes/crear') ?>", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const js = await r.json();
+
+                if (js.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Creado!',
+                        text: 'Almacén creado exitosamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+
+                    // Limpiar formulario
+                    $('#formCrearAlmacen')[0].reset();
+
+                    // Recargar tabla
+                    cargarTablaAlmacenes();
+
+                    // Actualizar selector principal
+                    $('#selectAlmacen').append(new Option(`${payload.codigo} - ${payload.nombre}`, js.data.id));
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: js.message || 'No se pudo crear el almacén' });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de red al crear almacén' });
+            }
+        });
+
+        // Cargar ubicaciones en tabla
+        async function cargarTablaUbicaciones(almacenId = null) {
+            try {
+                const url = almacenId
+                    ? `<?= site_url('api/ubicaciones') ?>?almacenId=${almacenId}`
+                    : `<?= site_url('api/ubicaciones') ?>`;
+
+                const r = await fetch(url);
+                const js = await r.json();
+                const ubicaciones = js.data || [];
+
+                const tbody = $('#tbodyUbicaciones');
+                if (!ubicaciones.length) {
+                    tbody.html('<tr><td colspan="6" class="text-center text-muted">No hay ubicaciones registradas</td></tr>');
+                    return;
+                }
+
+                // Obtener nombres de almacenes
+                const rAlm = await fetch("<?= site_url('api/almacenes') ?>");
+                const jsAlm = await rAlm.json();
+                const almacenes = jsAlm.data || [];
+                const almMap = {};
+                almacenes.forEach(a => almMap[a.id] = a.nombre);
+
+                const html = ubicaciones.map(u => `
+                    <tr>
+                        <td class="small">${almMap[u.almacenId] || '-'}</td>
+                        <td><strong>${u.codigo || ''}</strong></td>
+                        <td>${u.pasillo || '-'}</td>
+                        <td>${u.estante || '-'}</td>
+                        <td>${u.nivel || '-'}</td>
+                        <td>${u.letra || '-'}</td>
+                    </tr>
+                `).join('');
+                tbody.html(html);
+            } catch (e) {
+                console.error('Error cargando ubicaciones', e);
+            }
+        }
+
+        // Generar vista previa del código de ubicación
+        function actualizarCodigoPreview() {
+            const codigo = $('#ubicCodigo').val().trim();
+            if (codigo) {
+                $('#ubicCodigoPreview').text(codigo);
+                return;
+            }
+
+            const parts = [];
+            const pasillo = $('#ubicPasillo').val().trim();
+            const estante = $('#ubicEstante').val().trim();
+            const nivel = $('#ubicNivel').val().trim();
+            const letra = $('#ubicLetra').val().trim();
+
+            if (pasillo) parts.push('P' + pasillo);
+            if (estante) parts.push('E' + estante);
+            if (nivel) parts.push('N' + nivel);
+            if (letra) parts.push(letra);
+
+            $('#ubicCodigoPreview').text(parts.length ? parts.join('-') : '(se generará automáticamente)');
+        }
+
+        $('#ubicPasillo, #ubicEstante, #ubicNivel, #ubicLetra, #ubicCodigo').on('input', actualizarCodigoPreview);
+
+        // Crear ubicación
+        $('#formCrearUbicacion').on('submit', async function (e) {
+            e.preventDefault();
+
+            const payload = {
+                almacenId: parseInt($('#ubicAlmacen').val()),
+                pasillo: $('#ubicPasillo').val().trim(),
+                estante: $('#ubicEstante').val().trim(),
+                nivel: $('#ubicNivel').val().trim(),
+                letra: $('#ubicLetra').val().trim(),
+                codigo: $('#ubicCodigo').val().trim(),
+                descripcion: $('#ubicDescripcion').val().trim()
+            };
+
+            if (!payload.almacenId) {
+                Swal.fire({ icon: 'warning', title: 'Atención', text: 'Debe seleccionar un almacén' });
+                return;
+            }
+
+            try {
+                const r = await fetch("<?= site_url('api/ubicaciones/crear') ?>", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const js = await r.json();
+
+                if (js.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Creada!',
+                        text: 'Ubicación creada exitosamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+
+                    // Limpiar formulario (excepto almacén)
+                    $('#ubicPasillo, #ubicEstante, #ubicNivel, #ubicLetra, #ubicCodigo, #ubicDescripcion').val('');
+                    actualizarCodigoPreview();
+
+                    // Recargar tabla
+                    const filtroAlm = $('#filtroAlmacenUbicaciones').val();
+                    cargarTablaUbicaciones(filtroAlm || null);
+
+                    // Recargar ubicaciones en modal agregar si el almacén coincide
+                    const almacenAgModal = $('#agAlmacen').val();
+                    if (almacenAgModal == payload.almacenId) {
+                        loadUbicaciones(almacenAgModal);
+                    }
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: js.message || 'No se pudo crear la ubicación' });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de red al crear ubicación' });
+            }
+        });
+
+        // Filtro de ubicaciones por almacén
+        $('#filtroAlmacenUbicaciones').on('change', function () {
+            const almId = $(this).val();
+            cargarTablaUbicaciones(almId || null);
+        });
+
+        // Función global para ver ubicaciones de un almacén
+        window.verUbicacionesAlmacen = function (almacenId, nombre) {
+            // Cambiar a tab de ubicaciones
+            $('#ubicaciones-tab').tab('show');
+
+            // Seleccionar almacén en filtro
+            $('#filtroAlmacenUbicaciones').val(almacenId).trigger('change');
+
+            // Seleccionar almacén en formulario
+            $('#ubicAlmacen').val(almacenId);
+        };
+
+        // Cargar datos al abrir el modal
+        $('#gestionAlmacenesModal').on('show.bs.modal', function () {
+            cargarTablaAlmacenes();
+            cargarTablaUbicaciones();
+        });
+
+        // Cargar ubicaciones cuando cambia tab
+        $('#ubicaciones-tab').on('shown.bs.tab', function () {
+            const filtroAlm = $('#filtroAlmacenUbicaciones').val();
+            cargarTablaUbicaciones(filtroAlm || null);
         });
 
     })();
