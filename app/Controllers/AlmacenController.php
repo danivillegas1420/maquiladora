@@ -169,9 +169,40 @@ class AlmacenController extends BaseController
 
         // Si la tabla tiene maquiladoraID, asociarlo
         try {
-            $maquiladoraId = session()->get('maquiladora_id');
-            if ($maquiladoraId && $this->inv->tableHas('almacen', 'maquiladoraID')) {
+            $maquiladoraId = $in['maquiladoraID']
+                ?? $in['maquiladora_id']
+                ?? session()->get('maquiladora_id')
+                ?? session()->get('maquiladoraID');
+
+            // Fallback: si no está en sesión, intentar recuperar desde users.maquiladoraIdFK (si existe user_id)
+            if (empty($maquiladoraId) && session()->get('user_id')) {
+                try {
+                    $u = $db->table('users')
+                        ->select('maquiladoraIdFK')
+                        ->where('id', (int) session()->get('user_id'))
+                        ->get()
+                        ->getRowArray();
+                    if ($u && !empty($u['maquiladoraIdFK'])) {
+                        $maquiladoraId = (int) $u['maquiladoraIdFK'];
+                        session()->set('maquiladora_id', $maquiladoraId);
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+
+            if ($maquiladoraId && $db->fieldExists('maquiladoraID', 'almacen')) {
                 $data['maquiladoraID'] = (int) $maquiladoraId;
+            }
+        } catch (\Throwable $e) {
+        }
+
+        // Si la tabla requiere maquiladoraID (columna existe) y no se pudo determinar, no insertar con NULL
+        try {
+            if ($db->fieldExists('maquiladoraID', 'almacen') && empty($data['maquiladoraID'])) {
+                return $this->response->setStatusCode(422)->setJSON([
+                    'ok' => false,
+                    'message' => 'No se identificó la maquiladora del usuario (sesión).'
+                ]);
             }
         } catch (\Throwable $e) {
         }

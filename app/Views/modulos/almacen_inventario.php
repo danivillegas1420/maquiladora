@@ -503,6 +503,7 @@
                                     </div>
                                     <div class="card-body">
                                         <form id="formCrearAlmacen">
+                                            <input type="hidden" id="almMaquiladoraID" value="<?= (int) (session()->get('maquiladora_id') ?? session()->get('maquiladoraID') ?? 0) ?>">
                                             <div class="mb-3">
                                                 <label class="form-label">Código <span
                                                         class="text-danger">*</span></label>
@@ -1012,7 +1013,9 @@
                 const res = await fetch("<?= site_url('api/inventario/editar') ?>", {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                 });
-                const js = await res.json();
+
+                let js = null; try { js = await res.json(); } catch (_) { }
+
                 if (js.ok) {
                     bootstrap.Modal.getInstance(document.getElementById('editarModal')).hide();
                     dt.ajax.reload(null, false);
@@ -1455,7 +1458,8 @@
                 codigo: $('#almCodigo').val().trim(),
                 nombre: $('#almNombre').val().trim(),
                 ubicacion: $('#almUbicacion').val().trim(),
-                descripcion: $('#almDescripcion').val().trim()
+                descripcion: $('#almDescripcion').val().trim(),
+                maquiladoraID: parseInt($('#almMaquiladoraID').val(), 10) || null
             };
 
             if (!payload.codigo || !payload.nombre) {
