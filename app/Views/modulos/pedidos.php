@@ -234,16 +234,20 @@
                     <h6 class="mb-2">Orden de Producción</h6>
                     <div class="row g-3">
                         <input type="hidden" id="op-folio" name="op_folio" value="">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Cantidad plan</label>
                             <input type="number" min="1" step="1" class="form-control" id="op-cantidadPlan" name="op_cantidadPlan" placeholder="100">
                         </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Cantidad de bultos</label>
+                            <input type="number" min="1" step="1" class="form-control" id="op-cantidadBultos" name="op_cantidadBultos" placeholder="1">
+                        </div>
                         <input type="hidden" id="op-status" name="op_status" value="Planeada">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Inicio plan</label>
                             <input type="date" class="form-control" id="op-fechaInicioPlan" name="op_fechaInicioPlan" value="<?= date('Y-m-d') ?>">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Fin plan</label>
                             <input type="date" class="form-control" id="op-fechaFinPlan" name="op_fechaFinPlan">
                         </div>
@@ -560,6 +564,11 @@
                         <div class="col-md-6">
                             <label for="pe-cantidad" class="form-label">Cantidad Planeada</label>
                             <input type="number" class="form-control" id="pe-cantidad" name="op_cantidadPlan" min="1" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="pe-cantidad-bultos" class="form-label">Cantidad de Bultos</label>
+                            <input type="number" class="form-control" id="pe-cantidad-bultos" name="op_cantidadBultos" min="1" required>
                         </div>
 
                         <div class="col-md-6">
@@ -1280,6 +1289,7 @@ $(document).ready(function () {
                 oc_total:          $('#oc-total').val(),
                 op_folio:          $('#op-folio').val(),
                 op_cantidadPlan:   $('#op-cantidadPlan').val(),
+                op_cantidadBultos: $('#op-cantidadBultos').val(),
                 op_fechaInicioPlan:$('#op-fechaInicioPlan').val(),
                 op_fechaFinPlan:   $('#op-fechaFinPlan').val(),
                 op_status:         $('#op-status').val(),
@@ -2127,7 +2137,7 @@ $(document).ready(function () {
         function cargarPedidoEnModal(id){
             const url = '<?= base_url('modulo1/pedido') ?>/' + id + '/json';
             $('#pe-id').val(id);
-            $('#pe-folio, #pe-fecha, #pe-estatus, #pe-moneda, #pe-total, #pe-progreso, #pe-descripcion, #pe-cantidad, #pe-fechaentrega, #pe-modelo, #pe-tallas, #pe-color, #pe-materiales, #pe-especificaciones').val('');
+            $('#pe-folio, #pe-fecha, #pe-estatus, #pe-moneda, #pe-total, #pe-progreso, #pe-descripcion, #pe-cantidad, #pe-cantidad-bultos, #pe-fechaentrega, #pe-modelo, #pe-tallas, #pe-color, #pe-materiales, #pe-especificaciones').val('');
             $('#pe-empresa, #pe-dir, #pe-dis').text('');
             
             // Limpiar la tabla de tallas
@@ -2159,6 +2169,7 @@ $(document).ready(function () {
                 $('#pe-progreso').val(data.progreso || '');
                 $('#pe-descripcion').val(data.descripcion || '');
                 $('#pe-cantidad').val(data.cantidad || '');
+                $('#pe-cantidad-bultos').val(data.op_cantidadBultos || '');
                 $('#pe-fechaentrega').val(data.fecha_entrega || '');
                 $('#pe-modelo').val(data.modelo || '');
                 $('#pe-tallas').val(data.tallas || '');
@@ -2533,6 +2544,7 @@ $(document).ready(function () {
 
                 // Rellenar campos editables
                 $('#pe-cantidad').val(op.cantidadPlan || '');
+                $('#pe-cantidad-bultos').val(pedido.op_cantidadBultos || '');
                 $('#pe-fecha-fin').val(op.fechaFinPlan || '');
                 
                 // Recalcular total inicial

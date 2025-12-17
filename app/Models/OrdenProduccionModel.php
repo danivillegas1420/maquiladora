@@ -8,7 +8,7 @@ class OrdenProduccionModel extends Model
 {
     protected $table = 'orden_produccion';
     protected $primaryKey = 'id';
-    protected $allowedFields = ['ordenCompraId', 'disenoVersionId', 'folio', 'cantidadPlan', 'fechaInicioPlan', 'fechaFinPlan', 'status'];
+    protected $allowedFields = ['ordenCompraId', 'disenoVersionId', 'folio', 'cantidadPlan', 'cantidadBultos', 'fechaInicioPlan', 'fechaFinPlan', 'status'];
 
     public function getListado($maquiladoraId = null)
     {
@@ -118,6 +118,7 @@ class OrdenProduccionModel extends Model
             op.disenoVersionId,
             op.folio,
             op.cantidadPlan,
+            op.cantidadBultos,
             op.fechaInicioPlan,
             op.fechaFinPlan,
             op.status,
@@ -175,6 +176,7 @@ class OrdenProduccionModel extends Model
             'disenoVersionId' => $row['disenoVersionId'] ?? null,
             'folio' => $row['folio'] ?? '',
             'cantidadPlan' => isset($row['cantidadPlan']) ? (int) $row['cantidadPlan'] : null,
+            'cantidadBultos' => isset($row['cantidadBultos']) ? (int) $row['cantidadBultos'] : null,
             'fechaInicioPlan' => $fmt($row['fechaInicioPlan'] ?? null),
             'fechaFinPlan' => $fmt($row['fechaFinPlan'] ?? null),
             'status' => $row['status'] ?? '',
@@ -206,7 +208,7 @@ class OrdenProduccionModel extends Model
         if ($id <= 0)
             return null;
 
-        $row = $this->select('id, ordenCompraId, disenoVersionId, folio, cantidadPlan, fechaInicioPlan, fechaFinPlan, status')
+        $row = $this->select('id, ordenCompraId, disenoVersionId, folio, cantidadPlan, cantidadBultos, fechaInicioPlan, fechaFinPlan, status')
             ->where('id', $id)
             ->first();
 
@@ -220,6 +222,7 @@ class OrdenProduccionModel extends Model
             'disenoVersionId' => $row['disenoVersionId'] ?? null,
             'folio' => $row['folio'] ?? '',
             'cantidadPlan' => isset($row['cantidadPlan']) ? (int) $row['cantidadPlan'] : null,
+            'cantidadBultos' => isset($row['cantidadBultos']) ? (int) $row['cantidadBultos'] : null,
             'fechaInicioPlan' => $fmt($row['fechaInicioPlan'] ?? null),
             'fechaFinPlan' => $fmt($row['fechaFinPlan'] ?? null),
             'status' => $row['status'] ?? '',
@@ -235,20 +238,24 @@ class OrdenProduccionModel extends Model
         if ($folio === '')
             return null;
 
-        $row = $this->select('id, ordenCompraId, disenoVersionId, folio, cantidadPlan, fechaInicioPlan, fechaFinPlan, status')
+        $row = $this->select('id, ordenCompraId, disenoVersionId, folio, cantidadPlan, cantidadBultos, fechaInicioPlan, fechaFinPlan, status')
             ->where('folio', $folio)
             ->first();
 
         if (!$row)
             return null;
+
         $fmt = function ($v) {
-            return $v ? date('Y-m-d H:i:s', strtotime($v)) : ''; };
+            return $v ? date('Y-m-d H:i:s', strtotime($v)) : '';
+        };
+
         return [
             'id' => (int) $row['id'],
             'ordenCompraId' => $row['ordenCompraId'] ?? null,
             'disenoVersionId' => $row['disenoVersionId'] ?? null,
             'folio' => $row['folio'] ?? '',
             'cantidadPlan' => isset($row['cantidadPlan']) ? (int) $row['cantidadPlan'] : null,
+            'cantidadBultos' => isset($row['cantidadBultos']) ? (int) $row['cantidadBultos'] : null,
             'fechaInicioPlan' => $fmt($row['fechaInicioPlan'] ?? null),
             'fechaFinPlan' => $fmt($row['fechaFinPlan'] ?? null),
             'status' => $row['status'] ?? '',

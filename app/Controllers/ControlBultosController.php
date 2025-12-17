@@ -118,6 +118,52 @@ class ControlBultosController extends BaseController
         return view('modulos/control_bultos', $data);
     }
 
+    public function ver($id)
+    {
+        if (!can('menu.inspeccion')) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+
+        $id = (int) $id;
+        if ($id <= 0) {
+            return redirect()->to('/modulo3/control-bultos');
+        }
+
+        if (!$this->canAccessControlBulto($id)) {
+            return redirect()->to('/dashboard')->with('error', 'Acceso denegado');
+        }
+
+        $session = session();
+        $maquiladoraId = $session->get('maquiladora_id') ?? $session->get('maquiladoraID');
+        $usuarioId = $session->get('usuario_id')
+            ?? $session->get('user_id')
+            ?? $session->get('id');
+
+        $controlModel = new ControlBultosModel();
+        $plantillaModel = new PlantillaOperacionModel();
+        $ordenModel = new OrdenProduccionModel();
+        $empleadoModel = new EmpleadoModel();
+
+        $empleadoActual = null;
+        if ($usuarioId) {
+            $empleadoActual = $empleadoModel
+                ->where('idusuario', (int) $usuarioId)
+                ->where('activo', 1)
+                ->first();
+        }
+
+        $data = [
+            'controles' => $controlModel->getConMaquiladora($maquiladoraId),
+            'plantillas' => $plantillaModel->getPlantillasPorMaquiladora($maquiladoraId),
+            'ordenes' => $ordenModel->getListadoSinControl($maquiladoraId),
+            'empleados' => $empleadoModel->getEmpleadosActivos(),
+            'empleadoActual' => $empleadoActual,
+            'selectedControlId' => $id,
+        ];
+
+        return view('modulos/control_bultos', $data);
+    }
+
     /**
      * API: Listar controles
      */
@@ -173,6 +219,28 @@ class ControlBultosController extends BaseController
                 'ok' => false,
                 'message' => 'Control no encontrado'
             ]);
+        }
+
+        // Agregar cantidadBultos desde la OP (si existe)
+        $control['cantidadBultos'] = null;
+        $opId = (int) ($control['ordenProduccionId'] ?? 0);
+        if ($opId > 0) {
+            try {
+                $opRow = $this->db->table('orden_produccion')
+                    ->select('cantidadBultos')
+                    ->where('id', $opId)
+                    ->get()
+                    ->getRowArray();
+                if ($opRow && array_key_exists('cantidadBultos', $opRow)) {
+                    $control['cantidadBultos'] = $opRow['cantidadBultos'] !== null ? (int) $opRow['cantidadBultos'] : null;
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+        }
+
+        if (isset($control['bultos'])) {
+            unset($control['bultos']);
         }
 
         return $this->response->setJSON([
@@ -552,6 +620,55 @@ class ControlBultosController extends BaseController
                 ]);
             }
 
+            $ordenLabel = $control['orden'] ?? null;
+            $estiloLabel = $control['estilo'] ?? null;
+            $cantidadBultos = null;
+            if ((!$ordenLabel || trim((string) $ordenLabel) === '') || (!$estiloLabel || trim((string) $estiloLabel) === '')) {
+                $opId = (int) ($control['ordenProduccionId'] ?? 0);
+                if ($opId > 0) {
+                    try {
+                        $row = $this->db->table('orden_produccion op')
+                            ->select('op.folio, op.cantidadBultos, d.nombre AS diseno_nombre')
+                            ->join('diseno_version dv', 'dv.id = op.disenoVersionId', 'left')
+                            ->join('diseno d', 'd.id = dv.disenoId', 'left')
+                            ->where('op.id', $opId)
+                            ->get()
+                            ->getRowArray();
+
+                        if ((!$ordenLabel || trim((string) $ordenLabel) === '') && !empty($row['folio'])) {
+                            $ordenLabel = $row['folio'];
+                        }
+                        if ((!$estiloLabel || trim((string) $estiloLabel) === '') && !empty($row['diseno_nombre'])) {
+                            $estiloLabel = $row['diseno_nombre'];
+                        }
+                        if (array_key_exists('cantidadBultos', $row)) {
+                            $cantidadBultos = $row['cantidadBultos'] !== null ? (int) $row['cantidadBultos'] : null;
+                        }
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+                }
+            }
+
+            // Si no entramos al fallback de arriba (orden/estilo ya venían), igual intentar traer cantidadBultos
+            if ($cantidadBultos === null) {
+                $opId = (int) ($control['ordenProduccionId'] ?? 0);
+                if ($opId > 0) {
+                    try {
+                        $row = $this->db->table('orden_produccion')
+                            ->select('cantidadBultos')
+                            ->where('id', $opId)
+                            ->get()
+                            ->getRowArray();
+                        if ($row && array_key_exists('cantidadBultos', $row)) {
+                            $cantidadBultos = $row['cantidadBultos'] !== null ? (int) $row['cantidadBultos'] : null;
+                        }
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+                }
+            }
+
             $progresoGeneral = $controlModel->calcularProgresoGeneral($id);
             $listoParaArmado = $controlModel->verificarListoParaArmado($id);
             $estadisticas = $operacionModel->getEstadisticas($id);
@@ -688,6 +805,9 @@ class ControlBultosController extends BaseController
             return $this->response->setJSON([
                 'ok' => true,
                 'data' => [
+                    'orden' => $ordenLabel,
+                    'estilo' => $estiloLabel,
+                    'cantidadBultos' => $cantidadBultos,
                     'estado' => $control['estado'],
                     'progreso_general' => $progresoGeneral,
                     'listo_para_armado' => $listoParaArmado,
@@ -1271,6 +1391,10 @@ class ControlBultosController extends BaseController
             return redirect()->back()->with('error', 'Control no encontrado');
         }
 
+        if (empty($control['bultos'])) {
+            return redirect()->to('/modulo3/control-bultos/' . (int) $id);
+        }
+
         $matriz = $progresoModel->getMatrizProgreso($id);
         $progresoOperaciones = $progresoModel->getProgresoPorOperacion($id);
 
@@ -1288,37 +1412,68 @@ class ControlBultosController extends BaseController
         $bultos = [];
         $operaciones = [];
 
-        foreach ($matriz as $row) {
-            // Agregar bulto si no existe
-            if (!isset($bultos[$row['bultoId']])) {
-                $bultos[$row['bultoId']] = [
-                    'id' => $row['bultoId'],
-                    'numero_bulto' => $row['numero_bulto'],
-                    'talla' => $row['talla'],
-                    'cantidad' => $row['cantidad'],
+        // Si no hay registros de progreso aún, igual devolver bultos/operaciones
+        // para que la vista muestre la matriz (en ceros) y no el mensaje de "No hay bultos".
+        if (empty($matriz)) {
+            foreach (($control['bultos'] ?? []) as $b) {
+                $bId = (int) ($b['id'] ?? 0);
+                if ($bId <= 0) {
+                    continue;
+                }
+                $bultos[$bId] = [
+                    'id' => $bId,
+                    'numero_bulto' => $b['numero_bulto'] ?? '',
+                    'talla' => $b['talla'] ?? '',
+                    'cantidad' => isset($b['cantidad']) ? (int) $b['cantidad'] : 0,
                     'operaciones' => []
                 ];
             }
 
-            // Agregar operación si no existe
-            if (!isset($operaciones[$row['operacionId']])) {
-                $operaciones[$row['operacionId']] = [
-                    'id' => $row['operacionId'],
-                    'nombre' => $row['nombre_operacion'],
-                    'orden' => $row['operacion_orden']
+            foreach (($control['operaciones'] ?? []) as $op) {
+                $opId = (int) ($op['id'] ?? 0);
+                if ($opId <= 0) {
+                    continue;
+                }
+                $operaciones[$opId] = [
+                    'id' => $opId,
+                    'nombre' => $op['nombre_operacion'] ?? '',
+                    'orden' => isset($op['orden']) ? (int) $op['orden'] : 0,
                 ];
             }
+        } else {
+            foreach ($matriz as $row) {
+                // Agregar bulto si no existe
+                if (!isset($bultos[$row['bultoId']])) {
+                    $bultos[$row['bultoId']] = [
+                        'id' => $row['bultoId'],
+                        'numero_bulto' => $row['numero_bulto'],
+                        'talla' => $row['talla'],
+                        'cantidad' => $row['cantidad'],
+                        'operaciones' => []
+                    ];
+                }
 
-            // Agregar progreso de esta operación para este bulto
-            $bultos[$row['bultoId']]['operaciones'][$row['operacionId']] = [
-                'completado' => $row['completado'],
-                'cantidad_completada' => $row['cantidad_completada'],
-                'empleadoId' => $row['empleadoId'],
-                'fecha_completado' => $row['fecha_completado']
-            ];
+                // Agregar operación si no existe
+                if (!isset($operaciones[$row['operacionId']])) {
+                    $operaciones[$row['operacionId']] = [
+                        'id' => $row['operacionId'],
+                        'nombre' => $row['nombre_operacion'],
+                        'orden' => $row['operacion_orden']
+                    ];
+                }
+
+                // Agregar progreso de esta operación para este bulto
+                $bultos[$row['bultoId']]['operaciones'][$row['operacionId']] = [
+                    'completado' => $row['completado'],
+                    'cantidad_completada' => $row['cantidad_completada'],
+                    'empleadoId' => $row['empleadoId'],
+                    'fecha_completado' => $row['fecha_completado']
+                ];
+            }
         }
 
         // Ordenar operaciones por orden
+        $operaciones = array_values($operaciones);
         usort($operaciones, function ($a, $b) {
             return $a['orden'] <=> $b['orden'];
         });

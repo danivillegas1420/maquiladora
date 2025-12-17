@@ -44,6 +44,8 @@
                     <dd class="col-sm-9 text-dark" id="p-moneda">-</dd>
                     <dt class="col-sm-3 fw-semibold text-dark">Total</dt>
                     <dd class="col-sm-9 text-dark" id="p-total">-</dd>
+                    <dt class="col-sm-3 fw-semibold text-dark">Cantidad de bultos</dt>
+                    <dd class="col-sm-9 text-dark" id="p-op-cantidadBultos">-</dd>
                 </dl>
 
                 <h6 class="mb-2">Cliente</h6>
@@ -215,6 +217,7 @@
             const id = $(this).data('id');
 
             $('#p-id,#p-empresa,#p-folio,#p-fecha,#p-estatus,#p-moneda,#p-total').text('...');
+            $('#p-op-cantidadBultos').text('...');
             $('#p-cli-nombre,#p-cli-email,#p-cli-telefono,#p-cli-clasificacion').text('...');
             $('#p-dir-calle,#p-dir-numext,#p-dir-numint,#p-dir-ciudad,#p-dir-estado,#p-dir-cp,#p-dir-pais,#p-dir-resumen').text('...');
             $('#p-dis-codigo,#p-dis-nombre,#p-dis-descripcion,#p-dis-version,#p-dis-version-fecha,#p-dis-version-aprobado').text('...');
@@ -230,6 +233,8 @@
                     $('#p-estatus').text(data.estatus || '-');
                     $('#p-moneda').text(data.moneda || '-');
                     $('#p-total').text(data.total || '0.00');
+                    const cantB = (data.op_cantidadBultos ?? null);
+                    $('#p-op-cantidadBultos').text((cantB === null || cantB === '') ? '-' : String(cantB));
 
                     const cli = data.cliente || {};
                     $('#p-cli-nombre').text(cli.nombre || '-');
@@ -278,6 +283,7 @@
                     $('#p-empresa').text('No fue posible cargar los datos');
                     console.error('Error cargando', url, arguments);
                     $('#p-dis-codigo,#p-dis-nombre,#p-dis-descripcion,#p-dis-version,#p-dis-version-fecha,#p-dis-version-aprobado').text('-');
+                    $('#p-op-cantidadBultos').text('-');
                 });
         });
     });

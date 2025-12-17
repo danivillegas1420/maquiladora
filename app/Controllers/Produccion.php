@@ -948,5 +948,110 @@ class Produccion extends BaseController
             ]);
         }
     }
+
+    public function orden_comparticion($opId = null)
+    {
+        $opId = (int) ($opId ?? 0);
+        if ($opId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['ok' => false, 'message' => 'ID inválido']);
+        }
+
+        $db = \Config\Database::connect();
+        $maquiladoraSesion = session()->get('maquiladora_id') ?? session()->get('maquiladoraID');
+        $maquiladoraSesion = $maquiladoraSesion ? (int) $maquiladoraSesion : null;
+
+        $opRow = null;
+        try {
+            $opRow = $db->query('SELECT id, folio, cantidadPlan, maquiladoraID, maquiladoraCompartidaID FROM orden_produccion WHERE id = ? LIMIT 1', [$opId])->getRowArray();
+        } catch (\Throwable $e) {
+            try {
+                $opRow = $db->query('SELECT id, folio, cantidadPlan, maquiladoraID, maquiladoraCompartidaID FROM OrdenProduccion WHERE id = ? LIMIT 1', [$opId])->getRowArray();
+            } catch (\Throwable $e2) {
+                $opRow = null;
+            }
+        }
+
+        if (!$opRow) {
+            return $this->response->setStatusCode(404)->setJSON(['ok' => false, 'message' => 'Orden no encontrada']);
+        }
+
+        $ownId = (int) ($opRow['maquiladoraID'] ?? 0);
+        $sharedToId = (int) ($opRow['maquiladoraCompartidaID'] ?? 0);
+
+        if ($maquiladoraSesion && $ownId !== $maquiladoraSesion && $sharedToId !== $maquiladoraSesion) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'message' => 'Acceso denegado']);
+        }
+
+        $tipo = 'normal';
+        if ($maquiladoraSesion && $ownId && $ownId !== $maquiladoraSesion) {
+            $tipo = 'entrante';
+        } elseif ($sharedToId > 0) {
+            $tipo = 'saliente';
+        }
+
+        $getMaquiladoraNombre = function (int $id) use ($db): ?string {
+            if ($id <= 0) {
+                return null;
+            }
+            try {
+                $r = $db->query('SELECT Nombre_Maquila AS nombre FROM maquiladora WHERE idmaquiladora = ? LIMIT 1', [$id])->getRowArray();
+                return $r['nombre'] ?? null;
+            } catch (\Throwable $e) {
+                try {
+                    $r = $db->query('SELECT Nombre_Maquila AS nombre FROM Maquiladora WHERE idmaquiladora = ? LIMIT 1', [$id])->getRowArray();
+                    return $r['nombre'] ?? null;
+                } catch (\Throwable $e2) {
+                    return null;
+                }
+            }
+        };
+
+        $origenNombre = $getMaquiladoraNombre($ownId);
+        $destinoNombre = $getMaquiladoraNombre($sharedToId);
+
+        $control = null;
+        try {
+            $control = $db->query('SELECT id, cantidad_total, estado, created_at FROM control_bultos WHERE ordenProduccionId = ? ORDER BY created_at DESC, id DESC LIMIT 1', [$opId])->getRowArray();
+        } catch (\Throwable $e) {
+            $control = null;
+        }
+
+        $avance = null;
+        if (!empty($control) && isset($control['id'])) {
+            $controlId = (int) $control['id'];
+            $progreso = null;
+            try {
+                $cbModel = new \App\Models\ControlBultosModel();
+                $progreso = $cbModel->calcularProgresoGeneral($controlId);
+            } catch (\Throwable $e) {
+                $progreso = null;
+            }
+            $avance = [
+                'controlBultoId' => $controlId,
+                'cantidad_total' => isset($control['cantidad_total']) ? (int) $control['cantidad_total'] : null,
+                'estado' => $control['estado'] ?? null,
+                'progreso_general' => $progreso,
+            ];
+        }
+
+        return $this->response->setJSON([
+            'ok' => true,
+            'op' => [
+                'id' => (int) ($opRow['id'] ?? $opId),
+                'folio' => $opRow['folio'] ?? '',
+                'cantidadPlan' => isset($opRow['cantidadPlan']) ? (int) $opRow['cantidadPlan'] : null,
+                'tipo' => $tipo,
+            ],
+            'origen' => [
+                'id' => $ownId,
+                'nombre' => $origenNombre,
+            ],
+            'destino' => [
+                'id' => $sharedToId,
+                'nombre' => $destinoNombre,
+            ],
+            'avance' => $avance,
+        ]);
+    }
 }
 

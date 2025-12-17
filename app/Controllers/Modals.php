@@ -116,6 +116,7 @@ class Modals extends BaseController
                 'op_folio' => $detalle['op_folio'] ?? null,
                 'op_disenoVersionId' => $detalle['op_disenoVersionId'] ?? null,
                 'op_cantidadPlan' => $detalle['op_cantidadPlan'] ?? null,
+                'op_cantidadBultos' => $detalle['op_cantidadBultos'] ?? null,
                 'op_fechaInicioPlan' => $detalle['op_fechaInicioPlan'] ?? null,
                 'op_fechaFinPlan' => $detalle['op_fechaFinPlan'] ?? null,
                 'op_status' => $detalle['op_status'] ?? null,

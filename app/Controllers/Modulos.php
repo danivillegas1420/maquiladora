@@ -1840,6 +1840,7 @@ class Modulos extends BaseController
 
                     // Actualizar/crear OP
                     $opCantidadPlan = $this->request->getPost('op_cantidadPlan');
+                    $opCantidadBultos = $this->request->getPost('op_cantidadBultos');
                     $disenoVersionId = $this->request->getPost('disenoVersionId');
                     $disenoId = $this->request->getPost('disenoId');
 
@@ -1875,7 +1876,7 @@ class Modulos extends BaseController
                         }
                     }
 
-                    if ($opCantidadPlan !== null || $disenoVersionId !== null || $opFechaFinPlan !== null) {
+                    if ($opCantidadPlan !== null || $opCantidadBultos !== null || $disenoVersionId !== null || $opFechaFinPlan !== null) {
                         $op = null;
                         try {
                             $op = $db->query('SELECT * FROM orden_produccion WHERE ordenCompraId = ? ORDER BY id DESC LIMIT 1', [(int) $id])->getRowArray();
@@ -1893,6 +1894,9 @@ class Modulos extends BaseController
                             if ($opCantidadPlan !== null && $opCantidadPlan !== '') {
                                 $set['cantidadPlan'] = (int) $opCantidadPlan;
                             }
+                            if ($opCantidadBultos !== null && $opCantidadBultos !== '') {
+                                $set['cantidadBultos'] = (int) $opCantidadBultos;
+                            }
                             if ($disenoVersionId !== null && (int) $disenoVersionId > 0) {
                                 $set['disenoVersionId'] = (int) $disenoVersionId;
                             }
@@ -1909,6 +1913,7 @@ class Modulos extends BaseController
                                 'disenoVersionId' => ($disenoVersionId !== null && (int) $disenoVersionId > 0) ? (int) $disenoVersionId : null,
                                 'folio' => null,
                                 'cantidadPlan' => ($opCantidadPlan !== null && $opCantidadPlan !== '') ? (int) $opCantidadPlan : null,
+                                'cantidadBultos' => ($opCantidadBultos !== null && $opCantidadBultos !== '') ? (int) $opCantidadBultos : null,
                                 'fechaInicioPlan' => null,
                                 'fechaFinPlan' => ($opFechaFinPlan !== null && $opFechaFinPlan !== '') ? $opFechaFinPlan : null,
                                 'status' => 'Planeada',
@@ -3629,6 +3634,7 @@ class Modulos extends BaseController
 
         $opFolio = trim((string) $this->request->getPost('op_folio'));
         $opCantidadPlan = (int) ($this->request->getPost('op_cantidadPlan'));
+        $opCantidadBultos = (int) ($this->request->getPost('op_cantidadBultos'));
         $opFechaInicioPlan = (string) ($this->request->getPost('op_fechaInicioPlan'));
         $opFechaFinPlan = (string) ($this->request->getPost('op_fechaFinPlan'));
         $opStatus = (string) ($this->request->getPost('op_status') ?? 'Planeada');
@@ -3728,6 +3734,7 @@ class Modulos extends BaseController
                 'disenoVersionId' => $disenoVersionId,
                 'folio' => $opFolio !== '' ? $opFolio : ('OP-' . date('Y') . '-' . $clienteId),
                 'cantidadPlan' => $opCantidadPlan,
+                'cantidadBultos' => ($opCantidadBultos > 0 ? $opCantidadBultos : null),
                 'fechaInicioPlan' => $opFechaInicioPlan,
                 'fechaFinPlan' => ($opFechaFinPlan ?: null),
                 'status' => $opStatus ?: 'Planeada',

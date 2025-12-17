@@ -32,12 +32,15 @@ class PagosController extends BaseController
             $countDestajo   = 0;
             $countPorDia    = 0;
             $countPorHora   = 0;
+            $countPorPieza  = 0;
 
             foreach ($empleados as $emp) {
                 $totalEmpleados++;
                 $fp = $emp['Forma_pago'] ?? '';
                 if ($fp === 'Destajo') {
                     $countDestajo++;
+                } elseif ($fp === 'Por pieza') {
+                    $countPorPieza++;
                 } elseif ($fp === 'Por dia') {
                     $countPorDia++;
                 } elseif ($fp === 'Por hora') {
@@ -52,6 +55,7 @@ class PagosController extends BaseController
                 'countDestajo'   => $countDestajo,
                 'countPorDia'    => $countPorDia,
                 'countPorHora'   => $countPorHora,
+                'countPorPieza'  => $countPorPieza,
                 'notifCount'     => 0,
             ];
 
@@ -100,7 +104,7 @@ class PagosController extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'message' => 'No autorizado']);
         }
 
-        if ($this->request->getMethod() !== 'post') {
+        if (strtoupper($this->request->getMethod()) !== 'POST') {
             return $this->response->setStatusCode(405)->setJSON(['success' => false, 'message' => 'Método no permitido']);
         }
 
@@ -112,7 +116,7 @@ class PagosController extends BaseController
         }
 
         // Validar que la forma de pago sea válida
-        $formasValidas = ['Destajo', 'Por dia', 'Por hora'];
+        $formasValidas = ['Destajo', 'Por pieza', 'Por dia', 'Por hora'];
         if (!in_array($formaPago, $formasValidas)) {
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Forma de pago no válida']);
         }
@@ -146,7 +150,7 @@ class PagosController extends BaseController
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Datos incompletos']);
         }
 
-        $formasValidas = ['Destajo', 'Por día', 'Por hora'];
+        $formasValidas = ['Destajo', 'Por pieza', 'Por día', 'Por hora'];
         if (!in_array($formaPago, $formasValidas, true)) {
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'message' => 'Forma de pago no válida']);
         }

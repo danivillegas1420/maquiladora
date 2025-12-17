@@ -170,7 +170,7 @@ class PagosModel extends Model
 
         try {
             $builder = $db->table('empleado');
-            $result = $builder->where('id', $empleadoId)->update(['Forma_pago' => $formaPago]);
+            $result = $builder->where('id', $empleadoId)->update(['Forma_Pago' => $formaPago]);
 
             return $result;
 
@@ -251,21 +251,46 @@ class PagosModel extends Model
                         CONCAT(e.nombre, " ", e.apellido) AS nombre_completo,
                         e.Forma_Pago AS forma_pago_empleado,
                         tt.fecha,
-                        tt.horas_totales,
+                        CASE
+                            WHEN e.Forma_Pago COLLATE utf8mb4_unicode_ci IN ("Destajo", "Por pieza") THEN tt.piezas_totales
+                            ELSE tt.horas_totales
+                        END AS horas_totales,
+                        tt.piezas_totales,
                         COALESCE(tmp.monto, 0) AS tarifa_base,
                         CASE 
                             WHEN e.Forma_Pago COLLATE utf8mb4_unicode_ci = "Por hora" THEN tt.horas_totales * COALESCE(tmp.monto, 0)
                             WHEN e.Forma_Pago COLLATE utf8mb4_unicode_ci = "Por dia" THEN COALESCE(tmp.monto, 0)
+                            WHEN e.Forma_Pago COLLATE utf8mb4_unicode_ci IN ("Destajo", "Por pieza") THEN tt.piezas_totales * COALESCE(tmp.monto, 0)
                             ELSE 0
                         END AS pago_dia
                     FROM (
-                        SELECT 
-                            empleadoId,
-                            DATE(inicio) AS fecha,
-                            SUM(horas) AS horas_totales
-                        FROM tiempo_trabajo
-                        WHERE DATE(inicio) BETWEEN ? AND ?
-                        GROUP BY empleadoId, DATE(inicio)
+                        SELECT
+                            u.empleadoId,
+                            u.fecha,
+                            SUM(u.horas_totales) AS horas_totales,
+                            SUM(u.piezas_totales) AS piezas_totales
+                        FROM (
+                            SELECT 
+                                empleadoId,
+                                DATE(inicio) AS fecha,
+                                SUM(horas) AS horas_totales,
+                                0 AS piezas_totales
+                            FROM tiempo_trabajo
+                            WHERE DATE(inicio) BETWEEN ? AND ?
+                            GROUP BY empleadoId, DATE(inicio)
+
+                            UNION ALL
+
+                            SELECT
+                                empleadoId,
+                                DATE(fecha_registro) AS fecha,
+                                0 AS horas_totales,
+                                SUM(cantidad_producida) AS piezas_totales
+                            FROM registros_produccion
+                            WHERE DATE(fecha_registro) BETWEEN ? AND ?
+                            GROUP BY empleadoId, DATE(fecha_registro)
+                        ) u
+                        GROUP BY u.empleadoId, u.fecha
                     ) tt
                     JOIN empleado e ON e.id = tt.empleadoId
                     LEFT JOIN tarifa_modo_pago tmp 
@@ -275,7 +300,7 @@ class PagosModel extends Model
                             ELSE e.Forma_Pago COLLATE utf8mb4_unicode_ci
                         END';
 
-            $params = [$fechaInicio, $fechaFin];
+            $params = [$fechaInicio, $fechaFin, $fechaInicio, $fechaFin];
 
             // Filtro por maquiladora solo si existe en sesión
             if ($maquiladoraId !== null) {
@@ -283,7 +308,7 @@ class PagosModel extends Model
                 $params[] = $maquiladoraId;
             }
 
-            $sql .= ' AND e.Forma_Pago COLLATE utf8mb4_unicode_ci IN ("Por dia", "Por hora")
+            $sql .= ' AND e.Forma_Pago COLLATE utf8mb4_unicode_ci IN ("Por dia", "Por hora", "Destajo", "Por pieza")
                     ORDER BY tt.fecha ASC, nombre_completo ASC';
 
             log_message('debug', 'getPagosDiarios SQL: ' . $sql);

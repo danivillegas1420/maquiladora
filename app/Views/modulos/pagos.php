@@ -40,6 +40,7 @@
     }
 
     .destajo { background-color: #e3f2fd; color: #1565c0; }
+    .por-pieza { background-color: #ede7f6; color: #5e35b1; }
     .por-dia { background-color: #e8f5e8; color: #2e7d32; }
     .por-hora { background-color: #fff3e0; color: #ef6c00; }
     .no-registrada { background-color: #f5f5f5; color: #616161; }
@@ -103,6 +104,7 @@
                                 <select class="form-select" id="tarifa_forma_pago" name="forma_pago" required>
                                     <option value="">Seleccionar...</option>
                                     <option value="Destajo">Destajo</option>
+                                    <option value="Por pieza">Por pieza</option>
                                     <option value="Por día">Por día</option>
                                     <option value="Por hora">Por hora</option>
                                 </select>
@@ -234,6 +236,7 @@
                                         $badgeClass = 'no-registrada';
                                         switch($empleado['Forma_pago']) {
                                             case 'Destajo': $badgeClass = 'destajo'; break;
+                                            case 'Por pieza': $badgeClass = 'por-pieza'; break;
                                             case 'Por dia': $badgeClass = 'por-dia'; break;
                                             case 'Por hora': $badgeClass = 'por-hora'; break;
                                         }
@@ -275,6 +278,12 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <strong><i class="bi bi-calendar-day me-2"></i>Pagos diarios</strong>
                 <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="descargarNominaCSV()">
+                        <i class="bi bi-filetype-csv"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="descargarNominaPDF()">
+                        <i class="bi bi-filetype-pdf"></i>
+                    </button>
                     <input type="date" id="rep_fecha_inicio" class="form-control form-control-sm">
                     <span>a</span>
                     <input type="date" id="rep_fecha_fin" class="form-control form-control-sm">
@@ -292,7 +301,7 @@
                             <th>No. Empleado</th>
                             <th>Nombre</th>
                             <th>Forma de pago</th>
-                            <th>Horas</th>
+                            <th>Horas / Piezas</th>
                             <th>Tarifa</th>
                             <th>Pago del día</th>
                         </tr>
@@ -334,6 +343,7 @@
                         <select class="form-select" id="forma_pago" name="forma_pago" required>
                             <option value="">Seleccionar...</option>
                             <option value="Destajo">Destajo</option>
+                            <option value="Por pieza">Por pieza</option>
                             <option value="Por dia">Por día</option>
                             <option value="Por hora">Por hora</option>
                         </select>
@@ -367,6 +377,149 @@
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 <script>
     $(document).ready(function() {
+        if (!window.tarifasPorPiezaOverride) {
+            window.tarifasPorPiezaOverride = {};
+        }
+
+        if (!window.claveOverride) {
+            window.claveOverride = function(empleadoId, fecha) {
+                return String(empleadoId || '') + '|' + String(fecha || '');
+            };
+        }
+
+        function escaparCSV(valor) {
+            var v = (valor === null || valor === undefined) ? '' : String(valor);
+            v = v.replace(/\r?\n/g, ' ');
+            if (v.includes('"')) v = v.replace(/"/g, '""');
+            if (v.includes(',') || v.includes('"')) return '"' + v + '"';
+            return v;
+        }
+
+        function obtenerFilasNomina() {
+            var filas = [];
+            $('#tablaPagosDiarios tbody tr').each(function() {
+                var $tr = $(this);
+                if ($tr.find('td[colspan]').length) return;
+
+                var empleadoId = $tr.data('empleadoId');
+                var fecha = $tr.data('fecha');
+                var forma = $tr.data('forma');
+                var piezas = parseFloat($tr.data('piezas')) || 0;
+                var horas = parseFloat($tr.data('horas')) || 0;
+
+                var tarifa = null;
+                var $inputTarifa = $tr.find('input.input-tarifa-por-pieza');
+                if ($inputTarifa.length) {
+                    tarifa = parseFloat($inputTarifa.val());
+                    if (!isFinite(tarifa)) tarifa = 0;
+                } else {
+                    tarifa = parseFloat($tr.data('tarifa')) || 0;
+                }
+
+                var pago = null;
+                var $tdPago = $tr.find('td.td-pago');
+                if ($tdPago.length) {
+                    pago = parseFloat($tdPago.text());
+                    if (!isFinite(pago)) pago = 0;
+                } else {
+                    pago = parseFloat($tr.data('pago')) || 0;
+                }
+
+                filas.push({
+                    empleado_id: empleadoId,
+                    fecha: fecha,
+                    noEmpleado: $tr.data('noEmpleado'),
+                    nombre: $tr.data('nombre'),
+                    forma: forma,
+                    piezas: piezas,
+                    horas: horas,
+                    tarifa: tarifa,
+                    pago: pago
+                });
+            });
+            return filas;
+        }
+
+        window.descargarNominaCSV = function() {
+            var filas = obtenerFilasNomina();
+            if (!filas.length) {
+                Swal.fire({icon: 'warning', title: 'Sin datos', text: 'No hay filas para exportar.'});
+                return;
+            }
+
+            var encabezado = ['Fecha', 'No. Empleado', 'Nombre', 'Forma de pago', 'Piezas', 'Horas', 'Tarifa', 'Pago del día'];
+            var lineas = [];
+            lineas.push(encabezado.map(escaparCSV).join(','));
+            filas.forEach(function(f) {
+                lineas.push([
+                    f.fecha,
+                    f.noEmpleado,
+                    f.nombre,
+                    f.forma,
+                    (f.piezas || 0).toFixed(2),
+                    (f.horas || 0).toFixed(2),
+                    (f.tarifa || 0).toFixed(2),
+                    (f.pago || 0).toFixed(2)
+                ].map(escaparCSV).join(','));
+            });
+
+            var csv = lineas.join('\n');
+            var blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'nomina_' + ($('#rep_fecha_inicio').val() || '') + '_a_' + ($('#rep_fecha_fin').val() || '') + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        window.descargarNominaPDF = function() {
+            var filas = obtenerFilasNomina();
+            if (!filas.length) {
+                Swal.fire({icon: 'warning', title: 'Sin datos', text: 'No hay filas para exportar.'});
+                return;
+            }
+
+            if (typeof pdfMake === 'undefined') {
+                Swal.fire({icon: 'error', title: 'PDF no disponible', text: 'No se pudo cargar el generador de PDF.'});
+                return;
+            }
+
+            var body = [];
+            body.push(['Fecha', 'No. Emp.', 'Nombre', 'Forma', 'Piezas', 'Horas', 'Tarifa', 'Pago'].map(function(t){return {text: t, bold: true};}));
+            filas.forEach(function(f){
+                body.push([
+                    f.fecha,
+                    f.noEmpleado,
+                    f.nombre,
+                    f.forma,
+                    (f.piezas || 0).toFixed(2),
+                    (f.horas || 0).toFixed(2),
+                    (f.tarifa || 0).toFixed(2),
+                    (f.pago || 0).toFixed(2)
+                ]);
+            });
+
+            var docDefinition = {
+                pageOrientation: 'landscape',
+                content: [
+                    {text: 'Nómina', fontSize: 14, bold: true, margin: [0,0,0,6]},
+                    {text: 'Rango: ' + ($('#rep_fecha_inicio').val() || '') + ' a ' + ($('#rep_fecha_fin').val() || ''), margin: [0,0,0,10]},
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['auto','auto','*','auto','auto','auto','auto','auto'],
+                            body: body
+                        },
+                        layout: 'lightHorizontalLines'
+                    }
+                ]
+            };
+
+            pdfMake.createPdf(docDefinition).download('nomina_' + ($('#rep_fecha_inicio').val() || '') + '_a_' + ($('#rep_fecha_fin').val() || '') + '.pdf');
+        }
         if ($.fn.dataTable && $.fn.dataTable.Buttons) {
             $.fn.dataTable.Buttons.defaults.dom.container.className = 'dt-buttons';
         }
@@ -597,16 +750,68 @@
                 $tbody.empty();
                 if (response.success && response.data && response.data.length) {
                     response.data.forEach(function(row) {
-                        var tr = '<tr>' +
+                        var forma = (row.forma_pago_empleado || '').toString();
+                        var formaNorm = forma.toLowerCase();
+                        var isPorPieza = (formaNorm === 'destajo' || formaNorm === 'por pieza');
+                        var piezas = (parseFloat(row.piezas_totales) || 0);
+                        var horas = (parseFloat(row.horas_totales) || 0);
+                        var qty = isPorPieza ? piezas : horas;
+                        var empleadoId = row.empleado_id;
+                        var fecha = row.fecha;
+                        var tarifaBase = (parseFloat(row.tarifa_base) || 0);
+
+                        var tarifaMostrar = tarifaBase;
+                        if (formaNorm === 'por pieza') {
+                            var k = window.claveOverride(empleadoId, fecha);
+                            if (window.tarifasPorPiezaOverride.hasOwnProperty(k)) {
+                                tarifaMostrar = window.tarifasPorPiezaOverride[k];
+                            }
+                        }
+
+                        var pagoDia = (parseFloat(row.pago_dia) || 0);
+                        if (formaNorm === 'por pieza') {
+                            pagoDia = piezas * (parseFloat(tarifaMostrar) || 0);
+                        }
+
+                        var tr = '<tr ' +
+                            'data-empleado-id="' + empleadoId + '" ' +
+                            'data-fecha="' + fecha + '" ' +
+                            'data-forma="' + forma + '" ' +
+                            'data-no-empleado="' + row.noEmpleado + '" ' +
+                            'data-nombre="' + row.nombre_completo + '" ' +
+                            'data-piezas="' + piezas.toFixed(2) + '" ' +
+                            'data-horas="' + horas.toFixed(2) + '" ' +
+                            'data-tarifa="' + tarifaBase.toFixed(2) + '" ' +
+                            'data-pago="' + pagoDia.toFixed(2) + '"' +
+                            '>' +
                             '<td>' + row.fecha + '</td>' +
                             '<td>' + row.noEmpleado + '</td>' +
                             '<td>' + row.nombre_completo + '</td>' +
                             '<td>' + row.forma_pago_empleado + '</td>' +
-                            '<td class="text-end">' + parseFloat(row.horas_totales).toFixed(2) + '</td>' +
-                            '<td class="text-end">' + parseFloat(row.tarifa_base).toFixed(2) + '</td>' +
-                            '<td class="text-end">' + parseFloat(row.pago_dia).toFixed(2) + '</td>' +
+                            '<td class="text-end">' + qty.toFixed(2) + '</td>' +
+                            (formaNorm === 'por pieza'
+                                ? '<td class="text-end"><input type="number" step="0.01" min="0" class="form-control form-control-sm text-end input-tarifa-por-pieza" value="' + (parseFloat(tarifaMostrar) || 0).toFixed(2) + '" style="max-width: 110px; display: inline-block;"></td>'
+                                : '<td class="text-end">' + tarifaBase.toFixed(2) + '</td>') +
+                            '<td class="text-end td-pago">' + (parseFloat(pagoDia) || 0).toFixed(2) + '</td>' +
                             '</tr>';
                         $tbody.append(tr);
+                    });
+
+                    $('#tablaPagosDiarios').off('input', '.input-tarifa-por-pieza').on('input', '.input-tarifa-por-pieza', function() {
+                        var $input = $(this);
+                        var $tr = $input.closest('tr');
+                        var empleadoId = $tr.data('empleadoId');
+                        var fecha = $tr.data('fecha');
+                        var piezas = parseFloat($tr.data('piezas')) || 0;
+                        var tarifa = parseFloat($input.val());
+                        if (!isFinite(tarifa) || tarifa < 0) tarifa = 0;
+
+                        var k = window.claveOverride(empleadoId, fecha);
+                        window.tarifasPorPiezaOverride[k] = tarifa;
+
+                        var pago = piezas * tarifa;
+                        $tr.find('td.td-pago').text(pago.toFixed(2));
+                        $tr.attr('data-pago', pago.toFixed(2));
                     });
                 } else {
                     $tbody.append('<tr><td colspan="7" class="text-center text-muted">Sin registros para el rango seleccionado.</td></tr>');

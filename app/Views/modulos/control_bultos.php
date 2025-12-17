@@ -53,10 +53,10 @@
         background: #0f1115;
     }
 
-    /* Forzar estilos dentro del modal (evitar overrides por tema/Bootstrap) */
+    /* Estilos dentro del modal (modo claro): evitar texto blanco sobre fondo claro */
     #modalBitacoraMatriz .matriz-bitacora-wrap {
-        background: #0f1115 !important;
-        border-color: rgba(255,255,255,0.18) !important;
+        background: #ffffff !important;
+        border-color: #dee2e6 !important;
     }
 
     .matriz-bitacora {
@@ -77,8 +77,8 @@
 
     #modalBitacoraMatriz .matriz-bitacora th,
     #modalBitacoraMatriz .matriz-bitacora td {
-        border-color: rgba(255,255,255,0.18) !important;
-        color: #ffffff !important;
+        border-color: #dee2e6 !important;
+        color: #212529 !important;
     }
 
     .matriz-bitacora thead th {
@@ -91,8 +91,8 @@
     }
 
     #modalBitacoraMatriz .matriz-bitacora thead th {
-        background: #1f2d3d !important;
-        color: #ffffff !important;
+        background: #f8f9fa !important;
+        color: #212529 !important;
     }
 
     .matriz-bitacora .op-col {
@@ -107,8 +107,8 @@
     }
 
     #modalBitacoraMatriz .matriz-bitacora .op-col {
-        background: #1f2d3d !important;
-        color: #ffffff !important;
+        background: #f1f3f5 !important;
+        color: #212529 !important;
     }
 
     .matriz-bitacora tbody td {
@@ -116,8 +116,8 @@
     }
 
     #modalBitacoraMatriz .matriz-bitacora tbody td {
-        background: rgba(255,255,255,0.04) !important;
-        color: #ffffff !important;
+        background: #ffffff !important;
+        color: #212529 !important;
     }
 
     .matriz-bitacora td {
@@ -167,7 +167,7 @@
     #modalBitacoraMatriz .matriz-cell-item,
     #modalBitacoraMatriz .matriz-cell-item .emp,
     #modalBitacoraMatriz .matriz-cell-item .qty {
-        color: #ffffff !important;
+        color: #212529 !important;
     }
 
     @media (max-width: 768px) {
@@ -338,6 +338,10 @@
                         <h5 id="detalleEstilo">---</h5>
                     </div>
                     <div class="col-md-3">
+                        <small class="text-muted">Cantidad de Bultos</small>
+                        <h5 id="detalleCantidadBultos">---</h5>
+                    </div>
+                    <div class="col-md-3">
                         <small class="text-muted">Estado</small>
                         <div id="detalleEstado">---</div>
                     </div>
@@ -474,6 +478,10 @@
                     <div class="mb-3">
                         <label class="form-label">Estilo</label>
                         <input type="text" class="form-control" name="estilo" id="editEstilo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cantidad de Bultos</label>
+                        <input type="number" class="form-control" id="editCantidadBultos" readonly>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Cantidad Total</label>
@@ -622,7 +630,11 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="bitacoraMatrizTitulo">Vista Matriz - Bitácora</h5>
+                <div>
+                    <h5 class="modal-title" id="bitacoraMatrizTitulo">Vista Matriz - Bitácora</h5>
+                    <small class="text-muted" id="bitacoraMatrizOrdenFolio"></small>
+                    <div><small class="text-muted" id="bitacoraMatrizCantidadBultos"></small></div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -940,6 +952,13 @@
             }
         });
 
+        const __selectedControlId = <?= json_encode(isset($selectedControlId) ? (int) $selectedControlId : 0) ?>;
+        if (__selectedControlId) {
+            setTimeout(function () {
+                cargarDetalleControl(__selectedControlId);
+            }, 200);
+        }
+
         // Poblar selects
         const selectOrden = $('select[name="ordenProduccionId"]');
         ordenes.forEach(o => {
@@ -1143,6 +1162,8 @@
             }
 
             $('#bitacoraMatrizTitulo').text('Vista Matriz - Bitácora (Control #' + controlId + ')');
+            $('#bitacoraMatrizOrdenFolio').text('Orden: ... | Estilo: ...');
+            $('#bitacoraMatrizCantidadBultos').text('Cantidad de bultos: ...');
             $('#bitacoraMatrizLoading').show();
             $('#bitacoraMatrizEmpty').hide();
             $('#bitacoraMatrizContent').hide().empty();
@@ -1167,12 +1188,30 @@
                         if (!progOk) parts.push('Operaciones: ' + (respProg?.message || respProg?.error || respProg?.raw || 'Error'));
                         if (!regOk) parts.push('Registros: ' + (respReg?.message || respReg?.error || respReg?.raw || 'Error'));
                         $('#bitacoraMatrizEmpty').text(parts.join(' | ') || 'No se pudo cargar la información.').show();
+                        $('#bitacoraMatrizOrdenFolio').text('Orden: - | Estilo: -');
+                        $('#bitacoraMatrizCantidadBultos').text('Cantidad de bultos: -');
                         return;
                     }
 
                     const bultos = Array.isArray(respBul.data) ? respBul.data : [];
                     const operaciones = (respProg.data && Array.isArray(respProg.data.operaciones)) ? respProg.data.operaciones : [];
                     const registros = Array.isArray(respReg.data) ? respReg.data : [];
+
+                    const ordenFolio = (respProg.data && Object.prototype.hasOwnProperty.call(respProg.data, 'orden'))
+                        ? respProg.data.orden
+                        : null;
+                    const estilo = (respProg.data && Object.prototype.hasOwnProperty.call(respProg.data, 'estilo'))
+                        ? respProg.data.estilo
+                        : null;
+                    $('#bitacoraMatrizOrdenFolio').text(
+                        'Orden: ' + ((ordenFolio === null || ordenFolio === '') ? '-' : String(ordenFolio)) +
+                        ' | Estilo: ' + ((estilo === null || estilo === '') ? '-' : String(estilo))
+                    );
+
+                    const cantB = (respProg.data && Object.prototype.hasOwnProperty.call(respProg.data, 'cantidadBultos'))
+                        ? respProg.data.cantidadBultos
+                        : null;
+                    $('#bitacoraMatrizCantidadBultos').text('Cantidad de bultos: ' + ((cantB === null || cantB === '') ? '-' : String(cantB)));
 
                     if (operaciones.length === 0) {
                         $('#bitacoraMatrizEmpty').text('No hay operaciones configuradas para este control.').show();
@@ -1307,6 +1346,8 @@
                     const data = response.data;
                     $('#editId').val(data.id);
                     $('#editEstilo').val(data.estilo);
+                    const cantBultos = (data.cantidadBultos ?? null);
+                    $('#editCantidadBultos').val((cantBultos === null || cantBultos === '') ? '' : String(cantBultos));
                     $('#editCantidad').val(data.cantidad_total);
                     // Si hubiera observaciones en el response, las ponemos
                     // $('#editObservaciones').val(data.observaciones); 
@@ -1402,6 +1443,8 @@
                         // Actualizar cabecera del modal
                         $('#detalleOrden').text(data.orden || '---');
                         $('#detalleEstilo').text(data.estilo || '---');
+                        const cantBultos = (data.cantidadBultos ?? null);
+                        $('#detalleCantidadBultos').text((cantBultos === null || cantBultos === '') ? '---' : String(cantBultos));
                         $('#detalleEstado').html(`<span class="badge bg-secondary">${data.estado || 'Desconocido'}</span>`);
                         $('#regControlId').val(id);
 

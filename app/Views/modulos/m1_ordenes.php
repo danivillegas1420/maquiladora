@@ -31,6 +31,17 @@
         <strong>Lista de Órdenes de Producción</strong>
     </div>
     <div class="card-body">
+        <ul class="nav nav-pills mb-3" id="compartidasTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" type="button" data-compartidas-filter="all">Todas</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" type="button" data-compartidas-filter="entrante">Entrantes</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" type="button" data-compartidas-filter="saliente">Salientes</button>
+            </li>
+        </ul>
         <table id="tablaOrdenes" class="table table-striped table-bordered text-center align-middle">
             <thead class="table-light">
             <tr>
@@ -46,7 +57,15 @@
             <tbody>
             <?php if (!empty($ordenes)): ?>
                 <?php foreach ($ordenes as $orden): ?>
-                    <tr>
+                    <?php
+                        $__tipoCompartida = 'normal';
+                        if (isset($orden['maquiladoraID']) && isset($currentMaquiladoraId) && $orden['maquiladoraID'] != $currentMaquiladoraId) {
+                            $__tipoCompartida = 'entrante';
+                        } elseif (!empty($orden['maquiladoraCompartidaID'])) {
+                            $__tipoCompartida = 'saliente';
+                        }
+                    ?>
+                    <tr data-compartida-tipo="<?= esc($__tipoCompartida) ?>">
                         <td>
                             <?= esc($orden['op']) ?>
                             <?php if (isset($orden['maquiladoraID']) && isset($currentMaquiladoraId) && $orden['maquiladoraID'] != $currentMaquiladoraId): ?>
@@ -96,6 +115,9 @@
                                 <button type="button" class="btn btn-sm btn-outline-info btn-ver-op" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opDetalleModal">
                                     <i class="bi bi-eye"></i>
                                 </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-ver-comparticion" data-id="<?= esc($orden['opId'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opComparticionModal">
+                                    <i class="bi bi-diagram-3"></i>
+                                </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary btn-agregar-op" data-id="<?= esc($orden['opId'] ?? '') ?>" data-folio="<?= esc($orden['op'] ?? '') ?>" data-bs-toggle="modal" data-bs-target="#opAsignacionesModal">
                                     <i class="bi bi-person-plus"></i>
                                 </button>
@@ -127,6 +149,65 @@
             <?php endif; ?>
             </tbody>
         </table>
+    </div>
+
+    <div class="modal fade" id="opComparticionModal" tabindex="-1" aria-labelledby="opComparticionLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content text-dark">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="opComparticionLabel">Detalle de Compartición</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <strong>OP</strong>
+                            <div id="comp-op-folio">—</div>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Tipo</strong>
+                            <div><span class="badge bg-secondary" id="comp-op-tipo">—</span></div>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Cantidad Plan</strong>
+                            <div id="comp-op-cantidad">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Maquila Origen</strong>
+                            <div id="comp-origen">—</div>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Maquila Destino</strong>
+                            <div id="comp-destino">—</div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <strong>Avance</strong>
+                        </div>
+                        <div class="card-body">
+                            <div id="comp-avance-na" class="text-muted">—</div>
+                            <div id="comp-avance-wrap" style="display:none;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <span class="badge bg-info text-dark" id="comp-avance-estado">—</span>
+                                        <span class="ms-2">Cantidad: <span id="comp-avance-cantidad">—</span></span>
+                                    </div>
+                                    <a id="comp-avance-link" class="btn btn-sm btn-outline-primary" href="#" target="_blank" rel="noopener">Ver Control</a>
+                                </div>
+                                <div class="progress" role="progressbar" aria-label="Progreso">
+                                    <div class="progress-bar" id="comp-avance-bar" style="width:0%">0%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal Detalle OP -->
@@ -172,13 +253,17 @@
                         </div>
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-3">
                                     <strong>Cliente:</strong>
                                     <p class="mb-2" id="op-cliente">-</p>
                                 </div>
                                 <div class="col-md-3">
                                     <strong>Cantidad Planeada:</strong>
                                     <p class="mb-2 fw-bold" id="op-cant">-</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Cantidad de Bultos:</strong>
+                                    <p class="mb-2 fw-bold" id="op-bultos">-</p>
                                 </div>
                                 <div class="col-md-3">
                                     <strong>Total Pedido:</strong>
@@ -394,8 +479,21 @@
                 return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate())+'T'+pad(dt.getHours())+':'+pad(dt.getMinutes());
             }
 
+            let __compartidasFilter = 'all';
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex){
+                if (settings.nTable && settings.nTable.id !== 'tablaOrdenes') return true;
+                if (__compartidasFilter === 'all') return true;
+                try {
+                    const node = settings.aoData[dataIndex].nTr;
+                    const tipo = (node && node.getAttribute('data-compartida-tipo')) ? String(node.getAttribute('data-compartida-tipo')) : 'normal';
+                    return tipo === __compartidasFilter;
+                } catch (e) {
+                    return true;
+                }
+            });
+
             // DataTable + Botones
-            $('#tablaOrdenes').DataTable({
+            const __dtOrdenes = $('#tablaOrdenes').DataTable({
                 language: langES,
                 columnDefs: [
                     { targets: -1, orderable: false, searchable: false } // Acciones
@@ -413,6 +511,95 @@
                         exportOptions:{ columns: ':visible' } },
                     { extend:'print', text:'Imprimir', exportOptions:{ columns: ':visible' } }
                 ]
+            });
+
+            $(document).on('click', '[data-compartidas-filter]', function(){
+                const $btn = $(this);
+                const f = String($btn.data('compartidas-filter') || 'all');
+                __compartidasFilter = f;
+                $('#compartidasTabs [data-compartidas-filter]').removeClass('active');
+                $btn.addClass('active');
+                __dtOrdenes.draw();
+            });
+
+            function setComparticionTexto(sel, val){
+                $(sel).text(val);
+            }
+
+            $(document).on('click', '.btn-ver-comparticion', function(){
+                const opId = parseInt($(this).data('id') || 0, 10);
+                const $btn = $(this);
+                if (!opId) {
+                    setComparticionTexto('#comp-op-folio', '—');
+                    setComparticionTexto('#comp-op-tipo', '—');
+                    setComparticionTexto('#comp-op-cantidad', '—');
+                    setComparticionTexto('#comp-origen', '—');
+                    setComparticionTexto('#comp-destino', '—');
+                    $('#comp-avance-wrap').hide();
+                    $('#comp-avance-na').text('No se pudo determinar el ID de la OP.').show();
+                    return;
+                }
+
+                $btn.prop('disabled', true);
+                setComparticionTexto('#comp-op-folio', 'Cargando...');
+                setComparticionTexto('#comp-op-tipo', '...');
+                setComparticionTexto('#comp-op-cantidad', '...');
+                setComparticionTexto('#comp-origen', '...');
+                setComparticionTexto('#comp-destino', '...');
+                $('#comp-avance-wrap').hide();
+                $('#comp-avance-na').text('Cargando...').show();
+
+                $.getJSON('<?= base_url('modulo1/ordenes') ?>/' + opId + '/comparticion?t=' + Date.now())
+                    .done(function(resp){
+                        if (!resp || !resp.ok) {
+                            setComparticionTexto('#comp-op-folio', '—');
+                            $('#comp-avance-wrap').hide();
+                            $('#comp-avance-na').text((resp && resp.message) ? resp.message : 'No se pudo cargar el detalle.').show();
+                            return;
+                        }
+
+                        const folio = resp.op && resp.op.folio ? resp.op.folio : '—';
+                        const tipo = resp.op && resp.op.tipo ? String(resp.op.tipo) : 'normal';
+                        const cant = (resp.op && (resp.op.cantidadPlan ?? null) !== null) ? String(resp.op.cantidadPlan) : '—';
+
+                        setComparticionTexto('#comp-op-folio', folio);
+                        setComparticionTexto('#comp-op-cantidad', cant);
+
+                        const $badge = $('#comp-op-tipo');
+                        $badge.removeClass('bg-secondary bg-info bg-warning bg-primary');
+                        if (tipo === 'entrante') {
+                            $badge.addClass('bg-info text-dark').text('Entrante');
+                        } else if (tipo === 'saliente') {
+                            $badge.addClass('bg-warning text-dark').text('Saliente');
+                        } else {
+                            $badge.addClass('bg-secondary').text('Normal');
+                        }
+
+                        const origen = (resp.origen && resp.origen.nombre) ? resp.origen.nombre : (resp.origen && resp.origen.id ? ('#' + resp.origen.id) : '—');
+                        const destino = (resp.destino && resp.destino.nombre) ? resp.destino.nombre : (resp.destino && resp.destino.id ? ('#' + resp.destino.id) : '—');
+                        setComparticionTexto('#comp-origen', origen);
+                        setComparticionTexto('#comp-destino', destino);
+
+                        if (resp.avance && resp.avance.controlBultoId) {
+                            const pct = Math.max(0, Math.min(100, parseFloat(resp.avance.progreso_general ?? 0) || 0));
+                            $('#comp-avance-estado').text(resp.avance.estado || '—');
+                            $('#comp-avance-cantidad').text((resp.avance.cantidad_total ?? '—'));
+                            $('#comp-avance-bar').css('width', pct + '%').text(pct + '%');
+                            $('#comp-avance-link').attr('href', '<?= base_url('modulo3/control-bultos') ?>/' + encodeURIComponent(String(resp.avance.controlBultoId)) + '/matriz');
+                            $('#comp-avance-na').hide();
+                            $('#comp-avance-wrap').show();
+                        } else {
+                            $('#comp-avance-wrap').hide();
+                            $('#comp-avance-na').text('Sin control de bultos para esta OP.').show();
+                        }
+                    })
+                    .fail(function(xhr){
+                        $('#comp-avance-wrap').hide();
+                        $('#comp-avance-na').text('No se pudo cargar el detalle (HTTP ' + (xhr?.status || '?') + ').').show();
+                    })
+                    .always(function(){
+                        $btn.prop('disabled', false);
+                    });
             });
 
             // Eliminar OP
@@ -797,7 +984,7 @@
                 
                 // Inicializar campos
                 setText('#op-folio',''); setText('#op-status','');
-                setText('#op-cant',''); setText('#op-ini',''); setText('#op-fin','');
+                setText('#op-cant',''); setText('#op-bultos',''); setText('#op-ini',''); setText('#op-fin','');
                 setText('#op-cliente',''); setText('#op-total','');
                 setText('#op-dis-codigo',''); setText('#op-dis-nombre',''); 
                 setText('#op-dis-descripcion',''); setText('#op-dis-version',''); 
@@ -812,6 +999,7 @@
                         setText('#op-folio', data.folio || '-');
                         setText('#op-status', data.status || '-');
                         setText('#op-cant', (data.cantidadPlan ?? '') || '-');
+                        setText('#op-bultos', (data.cantidadBultos ?? '') || '-');
                         setText('#op-ini', data.fechaInicioPlan || '-');
                         setText('#op-fin', data.fechaFinPlan || '-');
                         
@@ -886,7 +1074,7 @@
                     .fail(function(xhr){
                         setText('#op-folio', '-');
                         setText('#op-status', 'Error HTTP ' + (xhr?.status || '?'));
-                        setText('#op-cant', '-'); setText('#op-ini', '-'); setText('#op-fin', '-');
+                        setText('#op-cant', '-'); setText('#op-bultos', '-'); setText('#op-ini', '-'); setText('#op-fin', '-');
                         setText('#op-cliente', '-'); setText('#op-total', '-');
                         setText('#op-dis-codigo', '-'); setText('#op-dis-nombre', '-'); 
                         setText('#op-dis-descripcion', '-'); setText('#op-dis-version', '-'); 

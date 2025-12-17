@@ -237,6 +237,7 @@ $routes->group('modulo1', [], function ($routes) {
     $routes->get('perfilempleado', 'Modulos::m1_perfilempleado');
     $routes->get('ordenes', 'Modulos::m1_ordenes');
     $routes->post('ordenes/compartir', 'Modulos::m1_ordenes_compartir');
+    $routes->get('ordenes/(:num)/comparticion', 'Produccion::orden_comparticion/$1');
     $routes->post('empleado/guardar', 'Modulos::m1_empleado_guardar', ['filter' => 'auth']);
     // APIs / Producción
     $routes->get('pedido/(:num)/json', 'Modals::pedido_json/$1');
@@ -461,7 +462,8 @@ $routes->group('modulo3', ['filter' => 'auth'], function ($routes) {
     // Grupo Control de Bultos
     $routes->group('control-bultos', function ($routes) {
         $routes->get('/', 'ControlBultosController::index');
-        $routes->get('(:num)', 'ControlBultosController::detalle/$1');
+        $routes->get('(:num)', 'ControlBultosController::ver/$1');
+        $routes->get('(:num)/json', 'ControlBultosController::detalle/$1');
         $routes->get('(:num)/matriz', 'ControlBultosController::vistaMatriz/$1');
         // Editor de Plantillas
         $routes->get('plantillas/editor/(:num)', 'ControlBultosController::editorPlantilla/$1');
@@ -820,7 +822,7 @@ $routes->get('pedidos-clientes/descargar-pdf/(:num)', 'PedidosClientesController
  * ------------------------------------------------------------------*/
 $routes->group('modulo1/pagos', ['filter' => 'auth'], static function ($r) {
     $r->get('empleado/(:num)', 'PagosController::getEmpleado/$1');
-    $r->post('actualizar-forma-pago', 'PagosController::actualizarFormaPago');
+    $r->match(['post', 'options'], 'actualizar-forma-pago', 'PagosController::actualizarFormaPago');
     $r->post('guardar-tarifa', 'PagosController::guardarTarifa');
     $r->get('tarifas', 'PagosController::tarifas');
     $r->post('reporte-diario', 'PagosController::reporteDiario');

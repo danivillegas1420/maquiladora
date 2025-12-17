@@ -181,6 +181,7 @@ class PedidoModel extends Model
                         ?? $op['Diseno_Version_Id']
                         ?? null;
                     $base['op_cantidadPlan'] = $op['cantidadPlan'] ?? ($op['cantidad_plan'] ?? ($op['CantidadPlan'] ?? null));
+                    $base['op_cantidadBultos'] = $op['cantidadBultos'] ?? ($op['cantidad_bultos'] ?? ($op['CantidadBultos'] ?? null));
                     $base['op_fechaInicioPlan'] = $op['fechaInicioPlan'] ?? ($op['fecha_inicio_plan'] ?? ($op['FechaInicioPlan'] ?? null));
                     $base['op_fechaFinPlan'] = $op['fechaFinPlan'] ?? ($op['fecha_fin_plan'] ?? ($op['FechaFinPlan'] ?? null));
                     $base['op_status'] = $op['status'] ?? ($op['estatus'] ?? ($op['Estado'] ?? null));
@@ -252,6 +253,7 @@ class PedidoModel extends Model
                             ?? null;
                         // Variantes cantidad plan
                         $base['op_cantidadPlan'] = $op['cantidadPlan'] ?? ($op['cantidad_plan'] ?? ($op['CantidadPlan'] ?? null));
+                        $base['op_cantidadBultos'] = $op['cantidadBultos'] ?? ($op['cantidad_bultos'] ?? ($op['CantidadBultos'] ?? null));
                         // Variantes fechas plan
                         $base['op_fechaInicioPlan'] = $op['fechaInicioPlan'] ?? ($op['fecha_inicio_plan'] ?? ($op['FechaInicioPlan'] ?? null));
                         $base['op_fechaFinPlan'] = $op['fechaFinPlan'] ?? ($op['fecha_fin_plan'] ?? ($op['FechaFinPlan'] ?? null));
@@ -275,7 +277,7 @@ class PedidoModel extends Model
             if ($row) {
                 // Si ya trajimos op_*, preservarlos
                 return array_merge($row, array_intersect_key($base, array_flip([
-                    'op_id','op_folio','op_disenoVersionId','op_cantidadPlan','op_fechaInicioPlan','op_fechaFinPlan','op_status'
+                    'op_id','op_folio','op_disenoVersionId','op_cantidadPlan','op_cantidadBultos','op_fechaInicioPlan','op_fechaFinPlan','op_status'
                 ])));
             }
         } catch (\Throwable $e) {}
@@ -552,6 +554,7 @@ class PedidoModel extends Model
             'op_folio' => $base['op_folio'] ?? null,
             'op_disenoVersionId' => $base['op_disenoVersionId'] ?? null,
             'op_cantidadPlan' => $base['op_cantidadPlan'] ?? null,
+            'op_cantidadBultos' => $base['op_cantidadBultos'] ?? null,
             'op_fechaInicioPlan' => $base['op_fechaInicioPlan'] ?? null,
             'op_fechaFinPlan' => $base['op_fechaFinPlan'] ?? null,
             'op_status' => $base['op_status'] ?? null,
