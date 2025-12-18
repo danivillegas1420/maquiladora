@@ -1040,7 +1040,7 @@ $('#formPedidoEditar').on('submit', function(e) {
     // Mostrar indicador de carga
     const $submitBtn = $(form).find('button[type="submit"]');
     const originalBtnText = $submitBtn.html();
-    $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...');
+    $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm text-light" role="status" aria-hidden="true"></span> Guardando...');
     
     // Enviar el formulario
     $.ajax({
@@ -1665,7 +1665,7 @@ $(document).ready(function () {
             $('#pa-dir-estado').val(d.estado || '');
             $('#pa-dir-cp').val(d.cp || '');
             $('#pa-dir-pais').val(d.pais || '');
-            const resumen = [d.calle, d.numExt ? ('#'+d.numExt):null, d.numInt?('Int '+d.numInt):null, d.ciudad, d.estado, d.pais, d.cp?('CP '+d.cp):null]
+            const resumen = [d.calle, d.numExt ? ('#'+d.numExt) : null, d.numInt ? ('Int '+d.numInt) : null, d.ciudad, d.estado, d.pais, d.cp ? ('CP '+d.cp) : null]
                 .filter(Boolean).join(', ');
             $('#pa-dir-resumen').val(resumen || '');
             const cla = cli.clasificacion || {};
@@ -1752,7 +1752,7 @@ $(document).ready(function () {
                 .done(function(arr){
                     const list = Array.isArray(arr) ? arr : [];
                     list.forEach(function(it, idx){
-                        const key = (it.id != null) ? String(it.id) : (it.codigo ? String(it.codigo) : ('idx_'+idx));
+                        const key = (it.id != null) ? String(it.id) : (it.codigo ? String(it.codigo) : String(idx));
                         const label = [it.codigo||'', it.nombre||''].filter(Boolean).join(' — ');
                         $selDis.append('<option value="'+ key +'" data-id="'+ (it.id ?? '') +'">'+ label +'</option>');
                     });
@@ -1988,7 +1988,7 @@ $(document).ready(function () {
                     $('#p-dir-estado').text(dir.estado || '-');
                     $('#p-dir-cp').text(dir.cp || '-');
                     $('#p-dir-pais').text(dir.pais || '-');
-                    const resumen = [dir.calle, dir.numExt ? ('#' + dir.numExt) : null, dir.numInt ? ('Int ' + dir.numInt) : null, dir.ciudad, dir.estado, dir.pais, dir.cp ? ('CP ' + dir.cp) : null]
+                    const resumen = [dir.calle, dir.numExt ? ('#'+dir.numExt):null, dir.numInt?('Int '+dir.numInt):null, dir.ciudad, dir.estado, dir.pais, dir.cp?('CP '+dir.cp):null]
                         .filter(Boolean).join(', ');
                     $('#p-dir-resumen').text(resumen || '-');
                     const cla = (cli.clasificacion || {});
@@ -2147,7 +2147,7 @@ $(document).ready(function () {
             const $modal = $('#pedidoEditModal');
             $modal.find('.modal-body').addClass('loading');
             $('#pe-cli-nombre, #pe-cli-email, #pe-cli-telefono').val('');
-            $('#pe-dir-calle, #pe-dir-numext, #pe-dir-numint, #pe-dir-ciudad, #pe-dir-estado, #pe-dir-cp, #pe-dir-pais, #pe-dir-resumen').val('');
+            $('#pe-dir-calle, #pe-dir-numext, #pe-dir-numint, #pe-dir-ciudad, #pe-dir-estado, #pe-dir-pais, #pe-dir-cp, #pe-dir-resumen').val('');
             $('#pe-dis-codigo, #pe-dis-nombre, #pe-dis-descripcion, #pe-dis-version, #pe-dis-version-fecha').val('');
             $('#pe-dis-version-aprobado').val('');
             const $selDis = $('#pe-dis-select');
@@ -2205,7 +2205,7 @@ $(document).ready(function () {
                 $('#pe-dir-estado').val(d.estado || '');
                 $('#pe-dir-cp').val(d.cp || '');
                 $('#pe-dir-pais').val(d.pais || '');
-                const dirTxt = [d.calle, d.numExt ? ('#'+d.numExt) : null, d.numInt ? ('Int '+d.numInt) : null, d.ciudad, d.estado, d.pais, d.cp ? ('CP '+d.cp) : null]
+                const dirTxt = [d.calle, d.numExt ? ('#'+d.numExt):null, d.numInt?('Int '+d.numInt):null, d.ciudad, d.estado, d.pais, d.cp?('CP '+d.cp):null]
                     .filter(Boolean).join(', ');
                 $('#pe-dir-resumen').val(dirTxt || '');
                 let dis = data.diseno || null;
@@ -2251,7 +2251,7 @@ $(document).ready(function () {
                                 if (selKey && mapByKey[selKey]) $selDis.val(selKey);
                             }
 
-                            if (!$selDis.val() && arr.length) {
+                            if (!$selDis.val() && arr.length){
                                 const firstKey = (arr[0].id != null) ? String(arr[0].id) : (arr[0].codigo ? String(arr[0].codigo) : '0');
                                 $selDis.val(firstKey);
                                 dis = mapByKey[firstKey];
@@ -2357,15 +2357,21 @@ $(document).ready(function () {
                 $('#pe-dis-loading').hide();
             }).fail(function(xhr, status, error){
                 console.error('Error al cargar el pedido:', status, error);
-                $modal.find('.modal-body').removeClass('loading');
-                $('#pe-dis-loading').hide();
+                console.error('Response JSON:', xhr.responseJSON);
+                console.error('Response Text:', xhr.responseText);
                 
-                // Mostrar mensaje de error
-                Swal.fire({
-                    title: 'Error',
-                    text: 'No se pudieron cargar los datos del pedido. Por favor, inténtalo de nuevo.',
-                    icon: 'error'
-                });
+                let errorMsg = 'No se pudieron cargar los datos del pedido.';
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        errorMsg += '\n\nDetalle: ' + xhr.responseJSON.message;
+                    }
+                    if (xhr.responseJSON.file && xhr.responseJSON.line) {
+                        errorMsg += '\n\nArchivo: ' + xhr.responseJSON.file + ':' + xhr.responseJSON.line;
+                    }
+                } else if (xhr.responseText) {
+                    errorMsg += '\n\n(Status: ' + xhr.status + ')';
+                }
+                Swal.fire('Error', errorMsg, 'error');
             });
         }
 
@@ -2467,7 +2473,7 @@ $(document).ready(function () {
 
             // Mostrar loading
             Swal.fire({title:'', didOpen:()=>Swal.showLoading()});
-
+            
             // Cargar datos del pedido y lista de diseños en paralelo
             $.when(
                 $.getJSON('<?= base_url('modulo1/pedido') ?>/' + id + '/json'),
@@ -2608,6 +2614,8 @@ $(document).ready(function () {
                 text: "Se actualizará la información del pedido.",
                 icon: 'question',
                 showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
                 confirmButtonText: 'Sí, guardar',
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
@@ -2874,7 +2882,7 @@ $(document).ready(function () {
             // Bloquear botón
             $btn.prop('disabled', true);
             const originalHtml = $btn.html();
-            $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>');
+            $btn.html('<span class="spinner-border spinner-border-sm text-light me-2" role="status" aria-hidden="true"></span>');
             
             // Re-habilitar después de 5 segundos (tiempo suficiente para iniciar descarga)
             setTimeout(function(){
@@ -2893,7 +2901,7 @@ $(document).ready(function () {
             // Bloquear botón
             $btn.prop('disabled', true);
             const originalHtml = $btn.html();
-            $btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>');
+            $btn.html('<span class="spinner-border spinner-border-sm me-2 text-light" role="status" aria-hidden="true"></span>');
             
             // Re-habilitar después de 5 segundos (tiempo suficiente para iniciar descarga)
             setTimeout(function(){
@@ -2943,6 +2951,19 @@ $(document).ready(function () {
             #pe-tallas-tabla .pe-talla-cantidad {
                 max-width: 100px;
                 margin-left: auto;
+            }
+
+            #op-tallas-tabla select,
+            #op-tallas-tabla input,
+            #pe-tallas-tabla select,
+            #pe-tallas-tabla input {
+                color: #212529 !important;
+                background-color: #fff !important;
+            }
+
+            #op-tallas-tabla select option,
+            #pe-tallas-tabla select option {
+                color: #212529 !important;
             }
         `);
 </script>

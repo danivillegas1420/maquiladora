@@ -415,7 +415,7 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
                                     <i class="bi bi-file-earmark-pdf"></i>
                                 </a>
                                 <form method="post" action="<?= site_url('modulo3/documentos/' . $id . '/eliminar') ?>"
-                                    class="d-inline ms-1" onsubmit="return confirm('¿Eliminar documento?');">
+                                    class="d-inline ms-1" onsubmit="return confirmarEliminarDocumento(event, this);">
                                     <?= csrf_field() ?>
                                     <button class="btn btn-outline-danger btn-sm btn-icon" type="submit" title="Eliminar">
                                         <i class="bi bi-trash"></i>
@@ -427,10 +427,6 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
                 <?php endforeach ?>
             </tbody>
         </table>
-    </div>
-</div>
-
-<?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -444,11 +440,30 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <!-- Supabase UMD -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+
+        window.confirmarEliminarDocumento = function (e, formEl) {
+            if (e && e.preventDefault) e.preventDefault();
+            Swal.fire({
+                title: 'Eliminar documento',
+                text: '¿Deseas eliminar este documento?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((r) => {
+                if (r.isConfirmed) {
+                    formEl.submit();
+                }
+            });
+            return false;
+        };
 
         const base = "<?= site_url('modulo3/documentos') ?>";
 
@@ -463,21 +478,21 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
         // Factura de envío
         document.getElementById('btnIrFacturar')?.addEventListener('click', () => {
             const id = getEmbarqueIdSeleccionado();
-            if (!id) { alert('Selecciona un embarque'); return; }
+            if (!id) { Swal.fire({icon:'info', title:'Seleccione un embarque', text:'Selecciona un embarque'}); return; }
             window.location.href = "<?= site_url('logistica/embarque') ?>/" + id + "/facturar/ui";
         });
 
         // Etiqueta (nueva vista independiente)
         document.getElementById('btnIrEtiqueta')?.addEventListener('click', () => {
             const id = getEmbarqueIdSeleccionado();
-            if (!id) { alert('Selecciona un embarque'); return; }
+            if (!id) { Swal.fire({icon:'info', title:'Seleccione un embarque', text:'Selecciona un embarque'}); return; }
             window.location.href = "<?= site_url('logistica/embarque') ?>/" + id + "/etiqueta";
         });
 
         // Aduanas
         document.getElementById('btnIrAduanas')?.addEventListener('click', () => {
             const id = getEmbarqueIdSeleccionado();
-            if (!id) { alert('Selecciona un embarque'); return; }
+            if (!id) { Swal.fire({icon:'info', title:'Seleccione un embarque', text:'Selecciona un embarque'}); return; }
             window.location.href = "<?= site_url('logistica/embarque') ?>/" + id + "/aduanas";
         });
 
@@ -529,7 +544,7 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
             btn.addEventListener('click', async () => {
                 const id = btn.dataset.id;
                 const r = await fetch(`${base}/${id}/json`);
-                if (!r.ok) return alert('No se pudo cargar el documento');
+                if (!r.ok) return Swal.fire({icon:'error', title:'Error', text:'No se pudo cargar el documento'});
                 const d = await r.json();
                 document.getElementById('v-tipo').textContent = d.tipo ?? '—';
                 document.getElementById('v-numero').textContent = d.numero ?? '—';
@@ -549,7 +564,7 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
             btn.addEventListener('click', async () => {
                 const id = btn.dataset.id;
                 const r = await fetch(`${base}/${id}/json`);
-                if (!r.ok) return alert('No se pudo cargar el documento');
+                if (!r.ok) return Swal.fire({icon:'error', title:'Error', text:'No se pudo cargar el documento'});
                 const d = await r.json();
                 document.getElementById('e-embarqueId').value = d.embarqueId ?? '';
                 document.getElementById('e-tipo').value = d.tipo ?? 'Factura';
@@ -787,7 +802,7 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         <form method="post" action="${base}/${doc.id}/eliminar"
-                                              class="d-inline ms-1" onsubmit="return confirm('¿Eliminar documento?');">
+                                              class="d-inline ms-1" onsubmit="return confirmarEliminarDocumento(event, this);">
                                             <input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>">
                                             <button class="btn btn-outline-danger btn-sm btn-icon" type="submit" title="Eliminar">
                                                 <i class="bi bi-trash"></i>
@@ -808,8 +823,8 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
 
                         newRow.find('.btn-ver').on('click', async function () {
                             const id = $(this).data('id');
-                            const r = await fetch(`${base} /${id}/json`);
-                            if (!r.ok) return alert('No se pudo cargar el documento');
+                            const r = await fetch(`${base}/${id}/json`);
+                            if (!r.ok) return Swal.fire({icon:'error', title:'Error', text:'No se pudo cargar el documento'});
                             const d = await r.json();
                             document.getElementById('v-tipo').textContent = d.tipo ?? '—';
                             document.getElementById('v-numero').textContent = d.numero ?? '—';
@@ -817,7 +832,7 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
                             document.getElementById('v-estado').textContent = d.estado ?? '—';
                             document.getElementById('v-embarque').textContent = d.embarqueFolio ?? '—';
                             const a = document.getElementById('v-pdf-a');
-                            const href = d.urlPdf ? d.urlPdf : (d.archivoPdf ? `${base} /${id}/pdf` : '#');
+                            const href = d.urlPdf ? d.urlPdf : (d.archivoPdf ? `${base}/${id}/pdf` : '#');
                             a.textContent = (d.urlPdf || d.archivoPdf) ? 'Abrir PDF' : '—';
                             a.href = href;
                             if (href !== '#') { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener'); }
@@ -826,8 +841,8 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
 
                         newRow.find('.btn-editar').on('click', async function () {
                             const id = $(this).data('id');
-                            const r = await fetch(`${base} /${id}/json`);
-                            if (!r.ok) return alert('No se pudo cargar el documento');
+                            const r = await fetch(`${base}/${id}/json`);
+                            if (!r.ok) return Swal.fire({icon:'error', title:'Error', text:'No se pudo cargar el documento'});
                             const d = await r.json();
                             document.getElementById('e-embarqueId').value = d.embarqueId ?? '';
                             document.getElementById('e-tipo').value = d.tipo ?? 'Factura';
@@ -836,24 +851,23 @@ $B_ADU = env('SUPABASE_BUCKET_ADUANAS') ?? 'Aduanas';
                             document.getElementById('e-estado').value = d.estado ?? 'Emitida';
                             document.getElementById('e-urlPdf').value = d.urlPdf ?? '';
                             document.getElementById('e-archivoPdf').value = d.archivoPdf ?? '';
-                            document.getElementById('formEditar').action = `${base} /${id}/editar`;
+                            document.getElementById('formEditar').action = `${base}/${id}/editar`;
                             cargarListaPorTipo('editar');
                             new bootstrap.Modal(document.getElementById('editarModal')).show();
                         });
 
-                        // Mostrar mensaje de éxito
-                        alert(data.message || 'Documento agregado correctamente');
+                        Swal.fire({icon:'success', title:'Listo', text: data.message || 'Documento agregado correctamente'});
 
                         // Resetear formulario
                         form.reset();
                         limpiarDestino($aUrl, $aRuta);
                         resetListado($aListado, $aRef, '— Selecciona primero un tipo —');
                     } else {
-                        alert(data.message || 'Error al agregar el documento');
+                        Swal.fire({icon:'error', title:'Error', text: data.message || 'Error al agregar el documento'});
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    alert('Error al procesar la solicitud');
+                    Swal.fire({icon:'error', title:'Error', text:'Error al procesar la solicitud'});
                 } finally {
                     submitBtn.disabled = false;
                     submitBtn.textContent = originalText;

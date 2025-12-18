@@ -442,10 +442,10 @@
         });
 
         // ----- Lógica de modales (demo) -----
-        $('#btnCalcular').on('click', () => alert('Calcular (demo)'));
-        $('#btnImportBOM').on('click', () => alert('Importar BOM (demo)'));
-        $('#btnGenTodas').on('click', () => alert('Generar todas (demo)'));
-        $(document).on('click', '.gen-oc', function () { alert('Generar OC #' + this.dataset.id + ' (demo)'); });
+        $('#btnCalcular').on('click', () => Swal.fire({icon:'info', title:'Demo', text:'Calcular (demo)'}));
+        $('#btnImportBOM').on('click', () => Swal.fire({icon:'info', title:'Demo', text:'Importar BOM (demo)'}));
+        $('#btnGenTodas').on('click', () => Swal.fire({icon:'info', title:'Demo', text:'Generar todas (demo)'}));
+        $(document).on('click', '.gen-oc', function () { Swal.fire({icon:'info', title:'Demo', text:'Generar OC #' + this.dataset.id + ' (demo)'}); });
 
         // ----- Requerimientos -----
         $(document).on('click', '.ver-req', function () {

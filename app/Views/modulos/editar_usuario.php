@@ -159,6 +159,7 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         // Validación de contraseñas (solo si se proporcionan)
         document.getElementById('confirm_password').addEventListener('input', function() {
@@ -181,7 +182,7 @@
             if (password !== '' || confirmPassword !== '') {
                 if (password !== confirmPassword) {
                     e.preventDefault();
-                    alert('Las contraseñas no coinciden');
+                    Swal.fire({icon:'warning', title:'Atención', text:'Las contraseñas no coinciden'});
                     return false;
                 }
             }

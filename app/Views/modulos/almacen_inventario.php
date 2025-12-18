@@ -1352,7 +1352,7 @@
                     }
                 ).catch(err => {
                     console.error("Error starting scanner", err);
-                    alert("No se pudo iniciar la cámara.");
+                    Swal.fire({icon:'error', title:'Error', text:'No se pudo iniciar la cámara.'});
                     reader.style.display = 'none';
                 });
             } else {

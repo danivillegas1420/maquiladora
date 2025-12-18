@@ -1263,65 +1263,6 @@
         })();
     </script>
 
-    <script>
-        (function () {
-            document.addEventListener('DOMContentLoaded', () => {
-                try {
-                    if (window.bootstrap && typeof window.bootstrap.Tooltip === 'function') {
-                        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-                            new bootstrap.Tooltip(el);
-                        });
-                    }
-                } catch (err) {
-                    console.warn('Error inicializando tooltips', err);
-                }
-
-                document.querySelectorAll('table').forEach(tbl => {
-                    tbl.classList.add('table', 'table-striped', 'table-hover', 'align-middle');
-                    const parent = tbl.parentElement;
-                    if (!parent) return;
-                    if (parent.classList && parent.classList.contains('table-responsive')) return;
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'table-responsive';
-                    parent.replaceChild(wrapper, tbl);
-                    wrapper.appendChild(tbl);
-                });
-
-                document.addEventListener('click', async (ev) => {
-                    const a = ev.target.closest('.js-open-incidencia-modal');
-                    if (!a) return;
-                    ev.preventDefault();
-                    try {
-                        const url = '<?= esc(base_url('modulo3/incidencias/modal')) ?>' + '?t=' + Date.now();
-                        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                        const html = await res.text();
-                        let wrap = document.getElementById('incidencias-modal-wrap');
-                        if (!wrap) {
-                            wrap = document.createElement('div');
-                            wrap.id = 'incidencias-modal-wrap';
-                            document.body.appendChild(wrap);
-                        }
-                        wrap.innerHTML = html;
-                        const modalEl = document.getElementById('incidenciaModal');
-                        if (window.bootstrap && modalEl) {
-                            const m = new bootstrap.Modal(modalEl, { backdrop: 'static' });
-                            m.show();
-                        }
-                    } catch (e) {
-                        console.error('Error cargando modal incidencias', e);
-                    }
-                });
-            });
-
-            window.addEventListener('pageshow', function (e) {
-                if (e.persisted) {
-                    location.reload();
-                }
-            });
-            window.addEventListener('unload', function () { });
-        })();
-    </script>
-
     <!-- Notification Polling System -->
     <script src="<?= base_url('js/notification-poller.js') ?>"></script>
 

@@ -448,7 +448,7 @@ $ordenes = $ordenes ?? [];
             btn.addEventListener('click', async () => {
                 const id = btn.dataset.id;
                 const res = await fetch(`${baseOrden}/${id}/json`);
-                if (!res.ok) return alert('No se pudo cargar el pedido');
+                if (!res.ok) return Swal.fire({icon:'error', title:'Error', text:'No se pudo cargar el pedido'});
                 const d = await res.json();
                 document.getElementById('v-folio').textContent = d.folio ?? '-';
                 document.getElementById('v-fecha').textContent = d.fecha ?? '-';
@@ -465,12 +465,13 @@ $ordenes = $ordenes ?? [];
             btn.addEventListener('click', async () => {
                 const id = btn.dataset.id;
                 const res = await fetch(`${baseOrden}/${id}/json`);
-                if (!res.ok) return alert('No se pudo cargar el pedido');
+                if (!res.ok) return Swal.fire({icon:'error', title:'Error', text:'No se pudo cargar el pedido'});
                 const d = await res.json();
 
                 document.getElementById('e-folio').value = d.folio ?? '';
                 document.getElementById('e-fecha').value = (d.fecha ?? '').substring(0, 10);
                 document.getElementById('e-estatus').value = d.estatus ?? 'abierto';
+
                 document.getElementById('e-moneda').value = d.moneda ?? 'MXN';
                 document.getElementById('e-total').value = d.total ?? '';
 

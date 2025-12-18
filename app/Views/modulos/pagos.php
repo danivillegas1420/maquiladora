@@ -628,6 +628,7 @@
                 data: formData,
                 processData: false,
                 contentType: false,
+                global: false,
                 success: function(response) {
                     if (response.success) {
                         Swal.fire({
@@ -655,9 +656,10 @@
                 }
             });
         });
+
     });
 
-    function editarFormaPago(empleadoId) {
+    window.editarFormaPago = function(empleadoId) {
         // Obtener datos del empleado
         $.get('<?= base_url('modulo1/pagos/empleado/') ?>' + empleadoId, function(response) {
             if (response.success) {
@@ -680,13 +682,13 @@
                 text: 'Error al obtener datos del empleado'
             });
         });
-    }
+    };
 
-    function recargarTabla() {
+    window.recargarTabla = function() {
         location.reload();
-    }
+    };
 
-    function abrirModalTarifas() {
+    window.abrirModalTarifas = function() {
         $('#formTarifasPago')[0].reset();
 
         // Limpiar tabla
@@ -721,9 +723,9 @@
         });
 
         $('#modalTarifasPago').modal('show');
-    }
+    };
 
-    function cargarPagosDiarios() {
+    window.cargarPagosDiarios = function() {
         var fechaInicio = $('#rep_fecha_inicio').val();
         var fechaFin    = $('#rep_fecha_fin').val();
 
@@ -819,9 +821,10 @@
             },
             error: function() {
                 $tbody.empty().append('<tr><td colspan="7" class="text-center text-danger">Error al cargar el reporte.</td></tr>');
-            }
+            },
+            complete: function() {}
         });
-    }
+    };
 
     function exportarDatos() {
         $.get('<?= base_url('modulo1/pagos/exportar') ?>', function(response) {

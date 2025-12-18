@@ -777,15 +777,15 @@
                     $.getJSON('<?= base_url('modulo1/ordenes/folio') ?>/' + encodeURIComponent(folio) + '/json?t=' + Date.now())
                         .done(function(data){
                             const id = parseInt(data.id||0,10);
-                            if (id>0) setAndLoad(id); else alert('No se pudo resolver la OP por folio.');
+                            if (id>0) setAndLoad(id); else Swal.fire({icon:'error', title:'Error', text:'No se pudo resolver la OP por folio.'});
                         })
                         .fail(function(xhr){
                             console.error('No se pudo resolver OP por folio', folio, xhr?.status, xhr?.responseText);
-                            alert('No se pudo resolver la OP por folio.');
+                            Swal.fire({icon:'error', title:'Error', text:'No se pudo resolver la OP por folio.'});
                         });
                     return;
                 }
-                alert('No se pudo determinar el ID de la OP.');
+                Swal.fire({icon:'error', title:'Error', text:'No se pudo determinar el ID de la OP.'});
             });
 
             $('#opAsignacionesModal').on('shown.bs.modal', function(){

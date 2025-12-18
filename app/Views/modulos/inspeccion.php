@@ -804,7 +804,7 @@
             const accion = $('textarea[name="accion_correctiva"]').val();
 
             if (!tipo || !descripcion) {
-                alert('Por favor complete el tipo y descripción del defecto');
+                Swal.fire({icon:'warning', title:'Atención', text:'Por favor complete el tipo y descripción del defecto'});
                 return;
             }
 
