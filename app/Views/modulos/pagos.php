@@ -23,6 +23,34 @@
         border-radius: .65rem !important;
         padding: .45rem 1rem !important;
     }
+
+    @media (max-width: 576px){
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dataTables_length{
+            width: 100%;
+            text-align: left;
+        }
+        .dataTables_wrapper .dataTables_filter input{
+            width: 100%;
+            margin-left: 0 !important;
+        }
+
+        .pagos-diarios-fechas input[type="date"]{
+            font-size: .85rem;
+            padding-top: .25rem;
+            padding-bottom: .25rem;
+        }
+
+        .pagos-diarios-fechas button[onclick="cargarPagosDiarios()"]{
+            width: 100%;
+            min-width: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            font-weight: 600;
+        }
+    }
 </style>
 <?= $this->endSection() ?>
 
@@ -275,20 +303,25 @@
     <!-- Pane: Pagos (tabla de pagos diarios) -->
     <div class="tab-pane fade" id="pane-pagos" role="tabpanel" aria-labelledby="tab-pagos">
         <div class="card shadow-sm mt-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <strong><i class="bi bi-calendar-day me-2"></i>Pagos diarios</strong>
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="descargarNominaCSV()">
-                        <i class="bi bi-filetype-csv"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" onclick="descargarNominaPDF()">
-                        <i class="bi bi-filetype-pdf"></i>
-                    </button>
-                    <input type="date" id="rep_fecha_inicio" class="form-control form-control-sm">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <strong><i class="bi bi-calendar-day me-2"></i>Pagos diarios</strong>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="descargarNominaCSV()">
+                            <i class="bi bi-filetype-csv"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="descargarNominaPDF()">
+                            <i class="bi bi-filetype-pdf"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="pagos-diarios-fechas d-flex flex-wrap align-items-center gap-2 mt-2">
+                    <input type="date" id="rep_fecha_inicio" class="form-control form-control-sm flex-grow-1">
                     <span>a</span>
-                    <input type="date" id="rep_fecha_fin" class="form-control form-control-sm">
+                    <input type="date" id="rep_fecha_fin" class="form-control form-control-sm flex-grow-1">
                     <button class="btn btn-sm btn-outline-primary" type="button" onclick="cargarPagosDiarios()">
                         <i class="bi bi-search"></i>
+                        <span>Buscar</span>
                     </button>
                 </div>
             </div>
