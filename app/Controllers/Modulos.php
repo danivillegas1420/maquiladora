@@ -2669,7 +2669,7 @@ class Modulos extends BaseController
             return $this->response->setHeader('Content-Type', 'text/html; charset=utf-8')->setBody($html);
         }
 
-        return view('modulos/roles', $this->payload([
+        return view('modulos/Roles', $this->payload([
             'title' => 'Gestión de Roles',
             'roles' => $roles,
             'notifCount' => 0,
