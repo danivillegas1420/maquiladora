@@ -13,13 +13,25 @@
     }
 
     .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
+
+    .catalogo-diseno-actions{ flex-wrap: wrap; }
+    @media (max-width: 576px){
+        .catalogo-diseno-actions{
+            width: 100%;
+            justify-content: flex-end;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .catalogo-diseno-actions > .btn{ flex: 0 0 auto; }
+    }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <h1 class="me-3">CATÁLOGO DE DISEÑOS</h1>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 catalogo-diseno-actions">
     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#nuevoDisenoModal">
         <i class="bi bi-plus-circle"></i> NUEVO DISEÑO
     </button>
