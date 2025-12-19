@@ -13,14 +13,26 @@
         border-radius: .375rem !important;
     }
     .dt-buttons.btn-group .btn:last-child{ margin-right: 0; }
+
+    .pedidos-actions{ flex-wrap: wrap; }
+    @media (max-width: 576px){
+        .pedidos-header{ flex-wrap: wrap; gap: .75rem; }
+        .pedidos-actions{
+            width: 100%;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .pedidos-actions > .btn{ flex: 0 0 auto; }
+    }
 </style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
-<div class="d-flex align-items-center mb-4">
+<div class="d-flex align-items-center mb-4 pedidos-header">
     <h1 class="me-3">Pedidos</h1>
     <span class="badge bg-primary">Módulo 1</span>
-    <div class="ms-auto d-flex gap-2">
+    <div class="ms-auto d-flex gap-2 pedidos-actions">
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#pedidoPdfModal">
             <i class="bi bi-file-arrow-up"></i> Cargar desde PDF
         </button>
