@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/main') ?>
 
 <?= $this->section('head') ?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
     .table-actions .btn {
         margin-right: .15rem;
@@ -12,8 +13,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">Proveedores</h1>
 
-    <button type="button"
-            class="btn btn-primary btn-sm js-nuevo-proveedor">
+    <button type="button" class="btn btn-primary btn-sm js-nuevo-proveedor">
         <i class="bi bi-plus-circle me-1"></i> Nuevo proveedor
     </button>
 </div>
@@ -37,77 +37,69 @@
         <div class="table-responsive">
             <table id="tablaProveedores" class="table table-striped table-hover align-middle">
                 <thead>
-                <tr>
-                    <th>Código</th>
-                    <th>Nombre / Empresa</th>
-                    <th>RFC</th>
-                    <th>Email</th>
-                    <th>Teléfono</th>
-                    <th>Dirección</th>
-                    <th>Objetos que maneja</th>
-                    <th class="text-center">Acciones</th>
-                </tr>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre / Empresa</th>
+                        <th>RFC</th>
+                        <th>Email</th>
+                        <th>Teléfono</th>
+                        <th>Dirección</th>
+                        <th>Objetos que maneja</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
                 </thead>
                 <tbody>
-                <?php if (!empty($proveedores)): ?>
-                    <?php foreach ($proveedores as $p): ?>
-                        <tr>
-                            <td><?= esc($p['codigo'] ?? '') ?></td>
-                            <td><?= esc($p['nombre'] ?? '') ?></td>
-                            <td><?= esc($p['rfc'] ?? '') ?></td>
-                            <td><?= esc($p['email'] ?? '') ?></td>
-                            <td><?= esc($p['telefono'] ?? '') ?></td>
-                            <td><?= esc($p['direccion'] ?? '') ?></td>
-                            <td><?= esc($p['objetos'] ?? '—') ?></td>
-                            <td class="text-center table-actions">
-                                <!-- Historial de órdenes -->
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-secondary js-historial-proveedor"
-                                        title="Historial de órdenes"
-                                        data-id="<?= (int)$p['id_proveedor'] ?>"
+                    <?php if (!empty($proveedores)): ?>
+                        <?php foreach ($proveedores as $p): ?>
+                            <tr>
+                                <td><?= esc($p['codigo'] ?? '') ?></td>
+                                <td><?= esc($p['nombre'] ?? '') ?></td>
+                                <td><?= esc($p['rfc'] ?? '') ?></td>
+                                <td><?= esc($p['email'] ?? '') ?></td>
+                                <td><?= esc($p['telefono'] ?? '') ?></td>
+                                <td><?= esc($p['direccion'] ?? '') ?></td>
+                                <td><?= esc($p['objetos'] ?? '—') ?></td>
+                                <td class="text-center table-actions">
+                                    <!-- Historial de órdenes -->
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-historial-proveedor"
+                                        title="Historial de órdenes" data-id="<?= (int) $p['id_proveedor'] ?>"
                                         data-nombre="<?= esc($p['nombre'] ?? '', 'attr') ?>">
-                                    <i class="bi bi-clock-history"></i>
-                                </button>
+                                        <i class="bi bi-clock-history"></i>
+                                    </button>
 
-                                <!-- Crear orden de pedido -->
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-success js-orden-proveedor"
-                                        title="Crear orden de pedido"
-                                        data-id="<?= (int)$p['id_proveedor'] ?>"
+                                    <!-- Crear orden de pedido -->
+                                    <button type="button" class="btn btn-sm btn-outline-success js-orden-proveedor"
+                                        title="Crear orden de pedido" data-id="<?= (int) $p['id_proveedor'] ?>"
                                         data-nombre="<?= esc($p['nombre'] ?? '', 'attr') ?>">
-                                    <i class="bi bi-cart-plus"></i>
-                                </button>
+                                        <i class="bi bi-cart-plus"></i>
+                                    </button>
 
-                                <!-- Editar proveedor -->
-                                <button type="button"
-                                        class="btn btn-sm btn-outline-primary js-editar-proveedor"
-                                        title="Editar proveedor"
-                                        data-id="<?= (int)$p['id_proveedor'] ?>"
+                                    <!-- Editar proveedor -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary js-editar-proveedor"
+                                        title="Editar proveedor" data-id="<?= (int) $p['id_proveedor'] ?>"
                                         data-codigo="<?= esc($p['codigo'] ?? '', 'attr') ?>"
                                         data-nombre="<?= esc($p['nombre'] ?? '', 'attr') ?>"
                                         data-rfc="<?= esc($p['rfc'] ?? '', 'attr') ?>"
                                         data-email="<?= esc($p['email'] ?? '', 'attr') ?>"
                                         data-telefono="<?= esc($p['telefono'] ?? '', 'attr') ?>"
                                         data-direccion="<?= esc($p['direccion'] ?? '', 'attr') ?>">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
 
-                                <!-- Eliminar proveedor -->
-                                <form action="<?= site_url('proveedores/eliminar/' . (int)$p['id_proveedor']) ?>"
-                                      method="post"
-                                      class="d-inline frm-eliminar-proveedor">
-                                    <?= csrf_field() ?>
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-danger js-eliminar-proveedor"
+                                    <!-- Eliminar proveedor -->
+                                    <form action="<?= site_url('proveedores/eliminar/' . (int) $p['id_proveedor']) ?>"
+                                        method="post" class="d-inline frm-eliminar-proveedor">
+                                        <?= csrf_field() ?>
+                                        <button type="button" class="btn btn-sm btn-outline-danger js-eliminar-proveedor"
                                             title="Eliminar proveedor"
                                             data-nombre="<?= esc($p['nombre'] ?? 'este proveedor', 'attr') ?>">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
@@ -170,7 +162,8 @@
 </div>
 
 <!-- Modal Orden de Pedido a Proveedor -->
-<div class="modal fade" id="modalOrdenProveedor" tabindex="-1" aria-labelledby="modalOrdenProveedorLabel" aria-hidden="true">
+<div class="modal fade" id="modalOrdenProveedor" tabindex="-1" aria-labelledby="modalOrdenProveedorLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <form method="post" action="<?= site_url('proveedores/orden') ?>" id="formOrdenProveedor">
@@ -206,7 +199,7 @@
                         <div class="col-12">
                             <label for="ord_descripcion" class="form-label">Materiales / Detalle del pedido</label>
                             <textarea class="form-control" id="ord_descripcion" name="descripcion" rows="3"
-                                      placeholder="Ej: Tela algodón azul 200m, hilo blanco 50 rollos, etc."></textarea>
+                                placeholder="Ej: Tela algodón azul 200m, hilo blanco 50 rollos, etc."></textarea>
                         </div>
                     </div>
                 </div>
@@ -223,7 +216,8 @@
 </div>
 
 <!-- Modal Historial de Órdenes -->
-<div class="modal fade" id="modalHistorialProveedor" tabindex="-1" aria-labelledby="modalHistorialProveedorLabel" aria-hidden="true">
+<div class="modal fade" id="modalHistorialProveedor" tabindex="-1" aria-labelledby="modalHistorialProveedorLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
@@ -234,16 +228,16 @@
                 <div class="table-responsive">
                     <table class="table table-sm table-striped" id="tablaHistorialProveedor">
                         <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Prioridad</th>
-                            <th>Estatus</th>
-                            <th>Descripción</th>
-                            <th class="text-center">Acciones</th>
-                        </tr>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Prioridad</th>
+                                <th>Estatus</th>
+                                <th>Descripción</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        <!-- Se llena por JS -->
+                            <!-- Se llena por JS -->
                         </tbody>
                     </table>
                 </div>
@@ -272,56 +266,56 @@
         }
 
         // URLs base
-        const baseHistorialUrl      = "<?= site_url('proveedores/historial') ?>";
-        const baseOrdenVerUrl       = "<?= site_url('proveedores/orden') ?>";
+        const baseHistorialUrl = "<?= site_url('proveedores/historial') ?>";
+        const baseOrdenVerUrl = "<?= site_url('proveedores/orden') ?>";
         const baseOrdenCompletarUrl = "<?= site_url('proveedores/orden/completar') ?>";
-        const baseOrdenEliminarUrl  = "<?= site_url('proveedores/orden/eliminar') ?>";
+        const baseOrdenEliminarUrl = "<?= site_url('proveedores/orden/eliminar') ?>";
 
-        const modalProveedorEl  = document.getElementById('modalProveedor');
-        const modalProveedor    = modalProveedorEl ? new bootstrap.Modal(modalProveedorEl) : null;
+        const modalProveedorEl = document.getElementById('modalProveedor');
+        const modalProveedor = modalProveedorEl ? new bootstrap.Modal(modalProveedorEl) : null;
 
-        const modalOrdenEl      = document.getElementById('modalOrdenProveedor');
-        const modalOrden        = modalOrdenEl ? new bootstrap.Modal(modalOrdenEl) : null;
+        const modalOrdenEl = document.getElementById('modalOrdenProveedor');
+        const modalOrden = modalOrdenEl ? new bootstrap.Modal(modalOrdenEl) : null;
 
-        const modalHistorialEl  = document.getElementById('modalHistorialProveedor');
-        const modalHistorial    = modalHistorialEl ? new bootstrap.Modal(modalHistorialEl) : null;
+        const modalHistorialEl = document.getElementById('modalHistorialProveedor');
+        const modalHistorial = modalHistorialEl ? new bootstrap.Modal(modalHistorialEl) : null;
 
-        const formProveedor     = document.getElementById('formProveedor');
-        const inputId           = document.getElementById('prov_id');
-        const tituloProv        = document.getElementById('modalProveedorLabel');
-        const btnGuardarProv    = document.getElementById('btnGuardarProveedor');
+        const formProveedor = document.getElementById('formProveedor');
+        const inputId = document.getElementById('prov_id');
+        const tituloProv = document.getElementById('modalProveedorLabel');
+        const btnGuardarProv = document.getElementById('btnGuardarProveedor');
 
-        const formOrden         = document.getElementById('formOrdenProveedor');
-        const inputProvId       = document.getElementById('ord_proveedor_id');
-        const inputProvNombre   = document.getElementById('ord_proveedor_nombre');
-        const inputFechaOrden   = document.getElementById('ord_fecha');
-        const selectPrioridad   = document.getElementById('ord_prioridad');
-        const txtDescripcion    = document.getElementById('ord_descripcion');
-        const tituloOrden       = document.getElementById('modalOrdenProveedorLabel');
+        const formOrden = document.getElementById('formOrdenProveedor');
+        const inputProvId = document.getElementById('ord_proveedor_id');
+        const inputProvNombre = document.getElementById('ord_proveedor_nombre');
+        const inputFechaOrden = document.getElementById('ord_fecha');
+        const selectPrioridad = document.getElementById('ord_prioridad');
+        const txtDescripcion = document.getElementById('ord_descripcion');
+        const tituloOrden = document.getElementById('modalOrdenProveedorLabel');
 
         const tablaHistorialTbody = document.querySelector('#tablaHistorialProveedor tbody');
-        const lblHistorial        = document.getElementById('modalHistorialProveedorLabel');
-        const lblHistorialVacio   = document.getElementById('historialVacio');
+        const lblHistorial = document.getElementById('modalHistorialProveedorLabel');
+        const lblHistorialVacio = document.getElementById('historialVacio');
 
         // Abrir modal Orden
         function abrirModalOrden(idProveedor, nombreProveedor, prioridad, descripcion) {
             if (!formOrden || !modalOrden) return;
 
             formOrden.reset();
-            inputProvId.value     = idProveedor;
+            inputProvId.value = idProveedor;
             inputProvNombre.value = nombreProveedor || '';
 
             // Fecha hoy por defecto
             try {
-                const hoy   = new Date();
-                const yyyy  = hoy.getFullYear();
-                const mm    = String(hoy.getMonth() + 1).padStart(2, '0');
-                const dd    = String(hoy.getDate()).padStart(2, '0');
+                const hoy = new Date();
+                const yyyy = hoy.getFullYear();
+                const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+                const dd = String(hoy.getDate()).padStart(2, '0');
                 inputFechaOrden.value = `${yyyy}-${mm}-${dd}`;
-            } catch (e) {}
+            } catch (e) { }
 
             selectPrioridad.value = prioridad || 'Normal';
-            txtDescripcion.value  = descripcion || '';
+            txtDescripcion.value = descripcion || '';
 
             tituloOrden.textContent = (descripcion && descripcion.trim() !== '')
                 ? 'Reutilizar orden de pedido para ' + (nombreProveedor || 'proveedor')
@@ -349,21 +343,21 @@
             btn.addEventListener('click', () => {
                 if (!formProveedor || !modalProveedor) return;
 
-                const id          = btn.getAttribute('data-id');
-                const codigo      = btn.getAttribute('data-codigo') || '';
-                const nombre      = btn.getAttribute('data-nombre') || '';
-                const rfc         = btn.getAttribute('data-rfc') || '';
-                const email       = btn.getAttribute('data-email') || '';
-                const telefono    = btn.getAttribute('data-telefono') || '';
-                const direccion   = btn.getAttribute('data-direccion') || '';
+                const id = btn.getAttribute('data-id');
+                const codigo = btn.getAttribute('data-codigo') || '';
+                const nombre = btn.getAttribute('data-nombre') || '';
+                const rfc = btn.getAttribute('data-rfc') || '';
+                const email = btn.getAttribute('data-email') || '';
+                const telefono = btn.getAttribute('data-telefono') || '';
+                const direccion = btn.getAttribute('data-direccion') || '';
 
                 inputId.value = id;
-                document.getElementById('prov_codigo').value       = codigo;
-                document.getElementById('prov_nombre').value       = nombre;
-                document.getElementById('prov_rfc').value          = rfc;
-                document.getElementById('prov_email').value        = email;
-                document.getElementById('prov_telefono').value     = telefono;
-                document.getElementById('prov_direccion').value    = direccion;
+                document.getElementById('prov_codigo').value = codigo;
+                document.getElementById('prov_nombre').value = nombre;
+                document.getElementById('prov_rfc').value = rfc;
+                document.getElementById('prov_email').value = email;
+                document.getElementById('prov_telefono').value = telefono;
+                document.getElementById('prov_direccion').value = direccion;
 
                 tituloProv.textContent = 'Editar proveedor';
                 btnGuardarProv.textContent = 'Actualizar';
@@ -375,7 +369,7 @@
         // Crear orden (nuevo)
         document.querySelectorAll('.js-orden-proveedor').forEach(btn => {
             btn.addEventListener('click', () => {
-                const id     = btn.getAttribute('data-id');
+                const id = btn.getAttribute('data-id');
                 const nombre = btn.getAttribute('data-nombre') || '';
                 abrirModalOrden(id, nombre, 'Normal', '');
             });
@@ -386,7 +380,7 @@
             btn.addEventListener('click', () => {
                 if (!modalHistorial || !tablaHistorialTbody) return;
 
-                const id     = btn.getAttribute('data-id');
+                const id = btn.getAttribute('data-id');
                 const nombre = btn.getAttribute('data-nombre') || '';
 
                 lblHistorial.textContent = 'Historial de órdenes - ' + (nombre || 'Proveedor');
@@ -407,40 +401,40 @@
                         lblHistorialVacio.style.display = 'none';
 
                         data.forEach(oc => {
-                            const tr        = document.createElement('tr');
-                            const tdFecha   = document.createElement('td');
-                            const tdPrio    = document.createElement('td');
-                            const tdEst     = document.createElement('td');
-                            const tdDesc    = document.createElement('td');
-                            const tdAcciones= document.createElement('td');
+                            const tr = document.createElement('tr');
+                            const tdFecha = document.createElement('td');
+                            const tdPrio = document.createElement('td');
+                            const tdEst = document.createElement('td');
+                            const tdDesc = document.createElement('td');
+                            const tdAcciones = document.createElement('td');
 
                             tdFecha.textContent = oc.fecha || '';
-                            tdPrio.textContent  = oc.prioridad || '';
-                            tdEst.textContent   = oc.estatus || '';
-                            tdDesc.textContent  = oc.descripcion || '';
+                            tdPrio.textContent = oc.prioridad || '';
+                            tdEst.textContent = oc.estatus || '';
+                            tdDesc.textContent = oc.descripcion || '';
                             tdAcciones.classList.add('text-center');
 
                             // Ver orden (HTML simple)
                             const btnVer = document.createElement('a');
-                            btnVer.href   = baseOrdenVerUrl + '/' + oc.id_proveedorOC;
+                            btnVer.href = baseOrdenVerUrl + '/' + oc.id_proveedorOC;
                             btnVer.target = '_blank';
-                            btnVer.rel    = 'noopener';
+                            btnVer.rel = 'noopener';
                             btnVer.className = 'btn btn-sm btn-outline-primary me-1';
-                            btnVer.title  = 'Ver orden';
+                            btnVer.title = 'Ver orden';
                             btnVer.innerHTML = '<i class="bi bi-eye"></i>';
 
                             // Marcar como cumplida
                             const btnCompletar = document.createElement('button');
-                            btnCompletar.type      = 'button';
+                            btnCompletar.type = 'button';
                             btnCompletar.className = 'btn btn-sm btn-outline-success me-1';
-                            btnCompletar.title     = 'Marcar como cumplida';
+                            btnCompletar.title = 'Marcar como cumplida';
                             btnCompletar.innerHTML = '<i class="bi bi-check-circle"></i>';
 
                             // Eliminar orden
                             const btnEliminar = document.createElement('button');
-                            btnEliminar.type      = 'button';
+                            btnEliminar.type = 'button';
                             btnEliminar.className = 'btn btn-sm btn-outline-danger';
-                            btnEliminar.title     = 'Eliminar orden';
+                            btnEliminar.title = 'Eliminar orden';
                             btnEliminar.innerHTML = '<i class="bi bi-trash"></i>';
 
                             // Eventos de completar
@@ -559,7 +553,7 @@
         // Eliminar proveedor
         document.querySelectorAll('.js-eliminar-proveedor').forEach(btn => {
             btn.addEventListener('click', function () {
-                const form   = this.closest('form');
+                const form = this.closest('form');
                 const nombre = this.getAttribute('data-nombre') || 'este proveedor';
 
                 if (!window.Swal) {

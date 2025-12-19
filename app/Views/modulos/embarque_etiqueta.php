@@ -46,6 +46,7 @@ $bultos       = $etiqueta['bultos']              ?? '';
         color: #6c757d;
         letter-spacing: .08em;
     }
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </style>
 <?= $this->endSection() ?>
 
@@ -167,11 +168,11 @@ $bultos       = $etiqueta['bultos']              ?? '';
                     </button>
 
                     <?php if ($idEtiqueta): ?>
-                        <a href="<?= site_url('logistica/etiqueta/'.$idEtiqueta.'/eliminar') ?>"
-                           class="btn btn-outline-danger"
-                           onclick="return confirm('¿Eliminar etiqueta?');">
+                        <button type="button"
+                                class="btn btn-outline-danger eliminar-etiqueta"
+                                data-url="<?= site_url('logistica/etiqueta/'.$idEtiqueta.'/eliminar') ?>">
                             <i class="bi bi-trash"></i> Eliminar
-                        </a>
+                        </button>
                     <?php endif; ?>
                 </div>
             </div>
@@ -253,5 +254,28 @@ $bultos       = $etiqueta['bultos']              ?? '';
             </form>
         </div></div>
 </div>
+
+<script>
+document.querySelectorAll('.eliminar-etiqueta').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const url = this.dataset.url;
+        
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: '¿Deseas eliminar esta etiqueta?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = url;
+            }
+        });
+    });
+});
+</script>
 
 <?= $this->endSection() ?>

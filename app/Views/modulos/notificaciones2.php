@@ -31,6 +31,8 @@
         font-size: 0.75rem;
         padding: 0.25rem 0.5rem;
     }
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </style>
 <?= $this->endSection() ?>
 
@@ -150,8 +152,10 @@
                                             <form action="<?= base_url('modulo3/notificaciones2/delete/' . $notif['id']) ?>"
                                                 method="post" class="d-inline">
                                                 <?= csrf_field() ?>
-                                                <button type="submit" class="btn btn-outline-danger" title="Eliminar"
-                                                    onclick="return confirm('¿Eliminar esta notificación?')">
+                                                <button type="button" class="btn btn-outline-danger eliminar-notif"
+                                                    data-id="<?= $notif['id'] ?>"
+                                                    data-url="<?= base_url('modulo3/notificaciones2/delete/' . $notif['id']) ?>"
+                                                    title="Eliminar">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>
@@ -176,6 +180,45 @@
             bsAlert.close();
         });
     }, 5000);
+
+    // Eliminar notificación con SweetAlert2
+    document.querySelectorAll('.eliminar-notif').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const url = this.dataset.url;
+            const id = this.dataset.id;
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: '¿Deseas eliminar esta notificación?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Crear y enviar formulario
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = url;
+
+                    // Agregar CSRF token
+                    const csrf = document.querySelector('input[name="<?= csrf_token() ?>"]');
+                    if (csrf) {
+                        const csrfInput = document.createElement('input');
+                        csrfInput.type = 'hidden';
+                        csrfInput.name = csrf.name;
+                        csrfInput.value = csrf.value;
+                        form.appendChild(csrfInput);
+                    }
+
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+    });
 </script>
 
 <?= $this->endSection() ?>
