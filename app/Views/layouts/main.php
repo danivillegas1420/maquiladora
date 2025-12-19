@@ -151,6 +151,49 @@
             background-color: #fafaf8;
         }
 
+        /* Responsive tables (mobile): evita que las tablas se salgan del contenedor */
+        @media (max-width: 768px) {
+            .table-responsive,
+            .dataTables_wrapper {
+                max-width: 100%;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            table.dataTable,
+            .table {
+                width: 100% !important;
+            }
+
+            table.dataTable th,
+            table.dataTable td,
+            .table th,
+            .table td {
+                white-space: nowrap;
+            }
+
+            /* Controles de DataTables: que no rompan el layout en móvil */
+            .dataTables_wrapper .dataTables_filter,
+            .dataTables_wrapper .dataTables_length,
+            .dataTables_wrapper .dataTables_info,
+            .dataTables_wrapper .dataTables_paginate {
+                float: none !important;
+                text-align: left !important;
+                width: 100% !important;
+            }
+
+            .dataTables_wrapper .dt-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: .25rem;
+                margin-bottom: .5rem;
+            }
+
+            .dataTables_wrapper .dt-buttons .btn {
+                flex: 1 1 auto;
+            }
+        }
+
         body:not([data-theme="dark"]) table thead th,
         body:not([data-theme="dark"]) .table thead th {
             color: #212529 !important;
@@ -1203,6 +1246,22 @@
 
     <!-- Custom scripts for all pages-->
     <script src="<?= base_url('js/sb-admin-2.min.js') ?>"></script>
+
+    <script>
+        // Evitar que el sidebar se auto-colapse en móvil por eventos de resize
+        // (en algunos navegadores móviles el viewport cambia al mostrar/ocultar la barra de dirección).
+        (function ($) {
+            if (!$) return;
+            $(function () {
+                $(window).off('resize');
+                $(window).on('resize', function () {
+                    if ($(window).width() < 768) {
+                        $('.sidebar .collapse').collapse('hide');
+                    }
+                });
+            });
+        })(window.jQuery);
+    </script>
 
     <!-- Modo oscuro / claro -->
     <script>
