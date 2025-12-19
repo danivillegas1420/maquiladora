@@ -2344,7 +2344,7 @@ class Modulos extends BaseController
         $fotoFile = $this->request->getFile('foto');
         if ($fotoFile && $fotoFile->isValid() && !$fotoFile->hasMoved()) {
             // Validar tipo de archivo
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             if (in_array($fotoFile->getMimeType(), $allowedTypes)) {
                 // Leer el contenido del archivo
                 $fotoData = file_get_contents($fotoFile->getTempName());

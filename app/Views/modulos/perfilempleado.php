@@ -174,9 +174,28 @@ $logged_in = session()->get('logged_in');
             <div class="card-body">
                 <?php 
                 $defaultAvatar = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20width%3D%22200%22%20height%3D%22200%22%20fill%3D%22%23e9ecef%22%2F%3E%3Ctext%20x%3D%22100%22%20y%3D%22120%22%20font-family%3D%22Arial%22%20font-size%3D%2280%22%20text-anchor%3D%22middle%22%20fill%3D%22%23667eea%22%3E👤%3C%2Ftext%3E%3C%2Fsvg%3E';
-                $avatarSrc = isset($empleado['foto']) && !empty($empleado['foto']) ? 
-                    'data:image/jpeg;base64,' . $empleado['foto'] : 
-                    $defaultAvatar;
+                $avatarSrc = $defaultAvatar;
+                if (isset($empleado['foto']) && !empty($empleado['foto'])) {
+                    $raw = $empleado['foto'];
+                    $isBase64 = is_string($raw)
+                        && (strlen($raw) % 4 === 0)
+                        && preg_match('/^[A-Za-z0-9+\/\r\n=]+$/', $raw);
+
+                    $binary = $isBase64 ? base64_decode($raw, true) : $raw;
+                    if ($binary !== false && $binary !== null && $binary !== '') {
+                        $mime = 'image/jpeg';
+                        try {
+                            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                            $detected = $finfo->buffer($binary);
+                            if (is_string($detected) && $detected !== '') {
+                                $mime = $detected;
+                            }
+                        } catch (\Throwable $e) {
+                            // keep default
+                        }
+                        $avatarSrc = 'data:' . $mime . ';base64,' . base64_encode($binary);
+                    }
+                }
                 ?>
                 <div class="profile-img-wrapper mb-3">
                     <img src="<?= $avatarSrc ?>" alt="Foto" class="profile-img">
@@ -532,7 +551,7 @@ $logged_in = session()->get('logged_in');
             <div class="photo-preview-wrapper">
               <div class="photo-preview-ring">
                 <img id="foto-preview" 
-                     src="<?= $hasEmpleado && !empty($empleado['foto']) ? 'data:image/jpeg;base64,' . $empleado['foto'] : base_url('assets/img/default-avatar.png') ?>" 
+                     src="<?= $avatarSrc !== $defaultAvatar ? $avatarSrc : base_url('assets/img/default-avatar.png') ?>" 
                      alt="Foto de perfil">
               </div>
               <div class="photo-controls">
@@ -548,7 +567,7 @@ $logged_in = session()->get('logged_in');
             </div>
             <div class="photo-help-text">
               <i class="bi bi-info-circle me-1"></i>
-              Formatos: JPG, PNG, GIF • Tamaño máximo: 2MB
+              Formatos: JPG, PNG, GIF, WEBP • Tamaño máximo: 2MB
             </div>
           </div>
 
@@ -705,12 +724,12 @@ document.addEventListener('DOMContentLoaded', function() {
           }
           
           // Validar tipo de archivo
-          const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+          const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
           if (!validTypes.includes(file.type)) {
             Swal.fire({
               icon: 'error',
               title: 'Error',
-              text: 'Formato de archivo no válido. Use JPG, PNG o GIF',
+              text: 'Formato de archivo no válido. Use JPG, PNG, GIF o WEBP',
               confirmButtonText: 'Entendido'
             });
             e.target.value = '';
